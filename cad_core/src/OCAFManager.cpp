@@ -97,6 +97,32 @@ bool OCAFManager::RemoveShape(const ShapePtr& shape) {
     return false; // 未找到形状
 }
 
+bool OCAFManager::ReplaceShape(const ShapePtr& oldShape, const ShapePtr& newShape) {
+    if (!m_document || !oldShape || !newShape) {
+        return false;
+    }
+    
+    // 查找对应旧形状的标签
+    std::vector<TDF_Label> labels = m_document->GetAllShapes();
+    for (const auto& label : labels) {
+        ShapePtr labelShape = m_document->GetShape(label);
+        if (labelShape && labelShape->GetOCCTShape().IsSame(oldShape->GetOCCTShape())) {
+            // 获取原有的名称
+            std::string name = m_document->GetName(label);
+            
+            // 移除旧形状
+            if (m_document->RemoveShape(label)) {
+                // 添加新形状，使用相同的名称
+                TDF_Label newLabel = m_document->AddShape(newShape, name);
+                return !newLabel.IsNull();
+            }
+            return false;
+        }
+    }
+    
+    return false; // 未找到旧形状
+}
+
 ShapePtr OCAFManager::GetShape(const std::string& name) const {
     if (!m_document || name.empty()) {
         return nullptr;

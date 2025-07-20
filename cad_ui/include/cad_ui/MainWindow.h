@@ -27,8 +27,10 @@
 #include "ThemeManager.h"
 #include "BooleanOperationDialog.h"
 #include "FilletChamferDialog.h"
+#include "TransformOperationDialog.h"
 #include "cad_core/CommandManager.h"
 #include "cad_core/OCAFManager.h"
+#include "cad_core/TransformCommand.h"
 #include "cad_feature/FeatureManager.h"
 
 namespace cad_ui {
@@ -130,6 +132,9 @@ private slots:
     void OnFillet();
     void OnChamfer();
     
+    // 变换操作
+    void OnTransformObjects();
+    
     // 对话框交互槽
     void OnSelectionModeChanged(bool enabled, const QString& prompt);
     void OnObjectSelected(const cad_core::ShapePtr& shape);
@@ -139,6 +144,9 @@ private slots:
     void OnFilletChamferOperationRequested(FilletChamferType type, 
                                          const std::vector<cad_core::ShapePtr>& edges,
                                          double radius, double distance1, double distance2);
+    void OnTransformOperationRequested(std::shared_ptr<cad_core::TransformCommand> command);
+    void OnTransformPreviewRequested(std::shared_ptr<cad_core::TransformCommand> command);
+    void OnTransformResetRequested();
     
     // 选择模式组合框
     void OnSelectionModeComboChanged(int index);
@@ -179,10 +187,15 @@ private:
     // Operation dialogs
     BooleanOperationDialog* m_currentBooleanDialog;
     FilletChamferDialog* m_currentFilletChamferDialog;
+    TransformOperationDialog* m_currentTransformDialog;
     
     // Current document info
     QString m_currentFileName;
     bool m_documentModified;
+    
+    // Transform preview support
+    std::vector<cad_core::ShapePtr> m_previewShapes;
+    bool m_previewActive;
     
     void CreateMenus();
     void CreateToolBars();
@@ -239,6 +252,9 @@ private:
     // Fillet and chamfer
     QAction* m_filletAction;
     QAction* m_chamferAction;
+    
+    // Transform operations
+    QAction* m_transformAction;
     
     // Selection mode combo box
     QComboBox* m_selectionModeCombo;

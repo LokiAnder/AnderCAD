@@ -25,6 +25,7 @@ public:
     bool AddShape(const ShapePtr& shape, const std::string& name = "");
     bool RemoveShape(const std::string& name);
     bool RemoveShape(const ShapePtr& shape);  // 根据形状指针删除
+    bool ReplaceShape(const ShapePtr& oldShape, const ShapePtr& newShape);  // 替换形状
     ShapePtr GetShape(const std::string& name) const;
     std::vector<std::string> GetAllShapeNames() const;
     std::vector<ShapePtr> GetAllShapes() const;

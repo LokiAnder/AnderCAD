@@ -36,7 +36,8 @@ MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent), m_tabWidget(nullptr), m_documentModified(false), 
       m_isDragging(false), m_dragStartPosition(), m_titleBar(nullptr),
       m_titleLabel(nullptr), m_minimizeButton(nullptr), m_maximizeButton(nullptr),
-      m_closeButton(nullptr), m_currentBooleanDialog(nullptr), m_currentFilletChamferDialog(nullptr) {
+      m_closeButton(nullptr), m_currentBooleanDialog(nullptr), m_currentFilletChamferDialog(nullptr),
+      m_currentTransformDialog(nullptr), m_previewActive(false) {
     
     // Load modern flat stylesheet
     QFile styleFile(":/resources/styles.qss");
@@ -80,6 +81,7 @@ MainWindow::MainWindow(QWidget* parent)
     m_tabWidget->setTabsClosable(true);
     m_tabWidget->setMovable(true);
     m_tabWidget->setObjectName("documentTabs");
+
     
     // Create first document tab
     m_viewer = new QtOccView(this);
@@ -250,6 +252,11 @@ void MainWindow::CreateActions() {
     m_chamferAction = new QAction("&Chamfer", this);
     m_chamferAction->setStatusTip("Add chamfer to selected edges");
     
+    // Transform actions
+    m_transformAction = new QAction("&Transform...", this);
+    m_transformAction->setShortcut(QKeySequence("Ctrl+T"));
+    m_transformAction->setStatusTip("Transform objects (translate, rotate, scale)");
+    
     // Selection mode now handled by combo box - old actions commented out for testing
     
     // Selection mode group now handled by combo box
@@ -322,6 +329,8 @@ void MainWindow::CreateMenus() {
     QMenu* modifyMenu = menuBar()->addMenu("&Modify");
     modifyMenu->addAction(m_filletAction);
     modifyMenu->addAction(m_chamferAction);
+    modifyMenu->addSeparator();
+    modifyMenu->addAction(m_transformAction);
     
     // Selection menu - now handled by combo box in toolbar
     
@@ -545,6 +554,11 @@ void MainWindow::CreateToolBars() {
     chamferBtn->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
     modificationsButtonsLayout->addWidget(chamferBtn);
     
+    QToolButton* transformBtn = new QToolButton();
+    transformBtn->setDefaultAction(m_transformAction);
+    transformBtn->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
+    modificationsButtonsLayout->addWidget(transformBtn);
+    
     modificationsLayout->addLayout(modificationsButtonsLayout);
     modifyLayout->addWidget(modificationsFrame);
     
@@ -687,6 +701,9 @@ void MainWindow::ConnectSignals() {
     // Modify actions
     connect(m_filletAction, &QAction::triggered, this, &MainWindow::OnFillet);
     connect(m_chamferAction, &QAction::triggered, this, &MainWindow::OnChamfer);
+    
+    // Transform operations
+    connect(m_transformAction, &QAction::triggered, this, &MainWindow::OnTransformObjects);
     
     // Selection mode combo box connected in CreateSelectionModeCombo()
     
@@ -1541,6 +1558,9 @@ void MainWindow::OnObjectSelected(const cad_core::ShapePtr& shape) {
     if (m_currentFilletChamferDialog) {
         m_currentFilletChamferDialog->onEdgeSelected(shape);
     }
+    if (m_currentTransformDialog) {
+        m_currentTransformDialog->onObjectSelected(shape);
+    }
 }
 
 void MainWindow::OnBooleanOperationRequested(BooleanOperationType type, 
@@ -1755,6 +1775,149 @@ void MainWindow::OnFilletChamferOperationRequested(FilletChamferType type,
         m_currentFilletChamferDialog->deleteLater();
         m_currentFilletChamferDialog = nullptr;
     }
+}
+
+// =============================================================================
+// Transform Operations Implementation
+// =============================================================================
+
+void MainWindow::OnTransformObjects() {
+    if (m_currentTransformDialog) {
+        m_currentTransformDialog->raise();
+        m_currentTransformDialog->activateWindow();
+        return;
+    }
+    
+    m_currentTransformDialog = new TransformOperationDialog(this);
+    
+    // Connect dialog signals
+    connect(m_currentTransformDialog, &TransformOperationDialog::selectionModeChanged,
+            this, &MainWindow::OnSelectionModeChanged);
+    connect(m_currentTransformDialog, &TransformOperationDialog::transformRequested,
+            this, &MainWindow::OnTransformOperationRequested);
+    connect(m_currentTransformDialog, &TransformOperationDialog::previewRequested,
+            this, &MainWindow::OnTransformPreviewRequested);
+    connect(m_currentTransformDialog, &TransformOperationDialog::resetRequested,
+            this, &MainWindow::OnTransformResetRequested);
+    
+    // Show dialog
+    m_currentTransformDialog->show();
+}
+
+void MainWindow::OnTransformOperationRequested(std::shared_ptr<cad_core::TransformCommand> command) {
+    if (!command) {
+        return;
+    }
+    
+    try {
+        // Reset any preview first
+        if (m_previewActive) {
+            OnTransformResetRequested();
+        }
+        
+        // Execute the transform command to get transformed shapes
+        if (command->Execute()) {
+            // Get original and transformed shapes
+            auto originalShapes = m_currentTransformDialog->getSelectedObjects();
+            auto transformedShapes = command->GetTransformedShapes();
+            
+            // Start OCAF transaction
+            m_ocafManager->StartTransaction("Transform Objects");
+            
+            // Replace shapes in OCAF document
+            for (size_t i = 0; i < originalShapes.size() && i < transformedShapes.size(); ++i) {
+                if (m_ocafManager->ReplaceShape(originalShapes[i], transformedShapes[i])) {
+                    // Update display
+                    m_viewer->RemoveShape(originalShapes[i]);
+                    m_viewer->DisplayShape(transformedShapes[i]);
+                    
+                    // Update document tree
+                    m_documentTree->RemoveShape(originalShapes[i]);
+                    m_documentTree->AddShape(transformedShapes[i]);
+                } else {
+                    m_ocafManager->AbortTransaction();
+                    QMessageBox::warning(this, "错误", "无法更新形状");
+                    return;
+                }
+            }
+            
+            // Commit transaction
+            m_ocafManager->CommitTransaction();
+            
+            // Update display and mark as modified
+            RefreshUIFromOCAF();
+            SetDocumentModified(true);
+            
+            // Update status bar
+            statusBar()->showMessage(QString("变换操作完成: %1").arg(command->GetName()), 0.5);
+        } else {
+            QMessageBox::warning(this, "错误", "变换操作执行失败");
+        }
+    } catch (const std::exception& e) {
+        m_ocafManager->AbortTransaction();
+        QMessageBox::warning(this, "错误", QString("变换操作失败: %1").arg(e.what()));
+    }
+    
+    // Clean up dialog
+    if (m_currentTransformDialog) {
+        m_currentTransformDialog->deleteLater();
+        m_currentTransformDialog = nullptr;
+    }
+}
+
+void MainWindow::OnTransformPreviewRequested(std::shared_ptr<cad_core::TransformCommand> command) {
+    if (!command) {
+        return;
+    }
+    
+    try {
+        // Clear any existing preview
+        if (m_previewActive) {
+            OnTransformResetRequested();
+        }
+        
+        // Get preview shapes from command
+        auto previewShapes = command->GetTransformedShapes();
+        
+        if (!previewShapes.empty()) {
+            // Store preview shapes
+            m_previewShapes = previewShapes;
+            m_previewActive = true;
+            
+            // Display preview shapes with a different color/style
+            for (const auto& shape : m_previewShapes) {
+                if (shape && shape->IsValid()) {
+                    // TODO: Set preview material/color (semi-transparent or different color)
+                    m_viewer->DisplayShape(shape);
+                }
+            }
+            
+            // Update display
+            m_viewer->update();
+        }
+    } catch (const std::exception& e) {
+        QMessageBox::warning(this, "错误", QString("预览生成失败: %1").arg(e.what()));
+    }
+}
+
+void MainWindow::OnTransformResetRequested() {
+    if (!m_previewActive) {
+        return;
+    }
+    
+    // Remove preview shapes from display
+    for (const auto& shape : m_previewShapes) {
+        if (shape) {
+            m_viewer->RemoveShape(shape);
+        }
+    }
+    
+    // Clear preview data
+    m_previewShapes.clear();
+    m_previewActive = false;
+    
+    // Update display
+    m_viewer->update();
 }
 
 } // namespace cad_ui

@@ -14,6 +14,7 @@ set(HEADERS
     include/cad_ui/CreatePrimitiveDialog.h
     include/cad_ui/BooleanOperationDialog.h
     include/cad_ui/FilletChamferDialog.h
+    include/cad_ui/TransformOperationDialog.h
 )
 
 # 源文件
@@ -30,6 +31,7 @@ set(SOURCES
     src/CreatePrimitiveDialog.cpp
     src/BooleanOperationDialog.cpp
     src/FilletChamferDialog.cpp
+    src/TransformOperationDialog.cpp
 )
 
 # 资源文件

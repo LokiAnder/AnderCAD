@@ -10,6 +10,7 @@ set(HEADERS
     include/cad_core/CreateBoxCommand.h
     include/cad_core/CreateCylinderCommand.h
     include/cad_core/CreateSphereCommand.h
+    include/cad_core/TransformCommand.h
     include/cad_core/OCAFDocument.h
     include/cad_core/OCAFManager.h
     include/cad_core/SelectionManager.h
@@ -26,6 +27,7 @@ set(SOURCES
     src/CreateBoxCommand.cpp
     src/CreateCylinderCommand.cpp
     src/CreateSphereCommand.cpp
+    src/TransformCommand.cpp
     src/OCAFDocument.cpp
     src/OCAFManager.cpp
     src/SelectionManager.cpp
