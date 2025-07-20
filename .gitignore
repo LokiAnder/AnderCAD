@@ -1,0 +1,170 @@
+# Visual Studio
+.vs/
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+*.sln
+*.suo
+*.user
+*.aps
+*.pch
+*.vspscc
+*_i.c
+*_p.c
+*.ncb
+*.tlb
+*.tlh
+*.bak
+*.cache
+*.ilk
+*.log
+*.lib
+*.sbr
+*.scc
+[Bb]in
+[Dd]ebug*/
+[Oo]bj/
+[Rr]elease*/
+[Tt]est[Rr]esult*
+[Bb]uild[Ll]og.*
+*.tlog
+*.lastbuildstate
+*.unsuccessfulbuild
+*.manifest
+*.res
+*.pdb
+*.idb
+*.exp
+*.iobj
+*.ipdb
+
+# CMake
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+build/
+out/
+**/cmake-build-*/
+CMakeUserPresets.json
+CMakePresets.json
+
+# Qt
+*.qm
+*.prl
+*_qmlcache.qrc
+moc_*.cpp
+moc_*.h
+qrc_*.cpp
+ui_*.h
+*.pro.user*
+*.qmake.stash
+.qmake.cache
+.qmake.vars
+Makefile*
+*.Debug
+*.Release
+
+# OpenCASCADE
+*.brep
+*.step
+*.stp
+*.iges
+*.igs
+*.stl
+
+# Generated files
+*.moc
+*.rcc
+*.uic
+*.generated
+
+# IDE files
+.vscode/
+*.code-workspace
+.idea/
+*.sublime-*
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*~
+*.orig
+
+# Logs and databases
+*.log
+*.sqlite
+*.sqlite3
+*.db
+
+# Archives
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# Configuration files (keep template versions)
+config.ini
+settings.ini
+*.local.ini
+
+# Output directories
+bin/
+lib/
+dist/
+*.app/
+*.bundle/
+
+# Documentation generated files
+docs/html/
+docs/latex/
+docs/xml/
+*.chm
+*.hlp
+
+# Package files
+*.deb
+*.rpm
+*.msi
+*.pkg
+*.dmg
+*.app
+
+# Test results
+test_results/
+coverage/
+*.coverage
+*.gcov
+*.gcno
+*.gcda
+
+# Dependency directories
+node_modules/
+vendor/
+third_party/
+
+# Editor directories and files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Claude
+.claude/
