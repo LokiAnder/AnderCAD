@@ -168,3 +168,4 @@ third_party/
 
 # Claude
 .claude/
+CLAUDE.md
