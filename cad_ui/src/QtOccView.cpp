@@ -1,4 +1,5 @@
 #include "cad_ui/QtOccView.h"
+#include "cad_ui/SketchMode.h"
 
 #include <OpenGl_GraphicDriver.hxx>
 #include <Aspect_Handle.hxx>
@@ -51,6 +52,9 @@ QtOccView::QtOccView(QWidget* parent)
     
     // Initialize selection manager
     m_selectionManager = std::make_unique<cad_core::SelectionManager>();
+    
+    // Initialize sketch mode (delayed initialization to avoid crash)
+    m_sketchMode = nullptr; // Will be initialized on first use
     
     // Initialize OpenCASCADE
     InitializeOCC();
@@ -120,6 +124,20 @@ bool QtOccView::InitViewer() {
         
         // Set up context
         m_context->SetDisplayMode(AIS_Shaded, Standard_False);
+        
+        // 设置选中和高亮样式
+        // 使用更直接的方法设置高亮颜色
+        Handle(Prs3d_Drawer) hilightDrawer = m_context->HighlightStyle(Prs3d_TypeOfHighlight_Selected);
+        if (!hilightDrawer.IsNull()) {
+            hilightDrawer->SetColor(Quantity_NOC_RED);
+            hilightDrawer->SetDisplayMode(1); // Shaded mode
+        }
+        
+        Handle(Prs3d_Drawer) preHilightDrawer = m_context->HighlightStyle(Prs3d_TypeOfHighlight_Dynamic);
+        if (!preHilightDrawer.IsNull()) {
+            preHilightDrawer->SetColor(Quantity_NOC_ORANGE);
+            preHilightDrawer->SetDisplayMode(1); // Shaded mode
+        }
         
         // Set up selection manager
         m_selectionManager->SetContext(m_context);
@@ -284,6 +302,19 @@ void QtOccView::SetBackgroundGradient(const QColor& color1, const QColor& color2
 void QtOccView::SetSelectionMode(int mode) {
     if (m_context.IsNull()) return;
     
+    // 切换选择模式时清除所有高亮
+    UnhighlightAllVertices();
+    UnhighlightAllEdges();
+    UnhighlightAllFaces();
+    
+    // 清除当前选择
+    if (!m_currentSelectedAIS.IsNull()) {
+        m_context->SetSelected(m_currentSelectedAIS, Standard_False);
+        m_currentSelectedAIS.Nullify();
+        m_currentSelectedShape.reset();
+    }
+    m_context->ClearSelected(Standard_False);
+    
     // Store current selection mode
     m_currentSelectionMode = mode;
     
@@ -329,6 +360,11 @@ void QtOccView::ClearSelection() {
         m_currentSelectedAIS.Nullify();
         m_currentSelectedShape.reset();
     }
+    
+    // Clear all highlights
+    UnhighlightAllEdges();
+    UnhighlightAllVertices();
+    UnhighlightAllFaces();
     
     m_context->ClearSelected(Standard_True);
     m_view->Redraw();
@@ -398,6 +434,12 @@ void QtOccView::mousePressEvent(QMouseEvent* event) {
     m_lastMousePos = event->pos();
     m_currentMouseButton = event->button();
     
+    // 优先处理草图模式
+    if (IsInSketchMode()) {
+        m_sketchMode->HandleMousePress(event);
+        return;
+    }
+    
     if (event->button() == Qt::LeftButton) {
         // Start rotation
         if (!m_view.IsNull()) {
@@ -410,7 +452,26 @@ void QtOccView::mousePressEvent(QMouseEvent* event) {
 void QtOccView::mouseMoveEvent(QMouseEvent* event) {
     if (m_view.IsNull()) return;
     
+    // 发射鼠标位置信号（屏幕坐标）
     QPoint currentPos = event->pos();
+    emit MousePositionChanged(currentPos.x(), currentPos.y());
+    
+    // 尝试获取3D世界坐标
+    try {
+        // 将屏幕坐标转换为3D世界坐标
+        Standard_Real X, Y, Z;
+        m_view->Convert(currentPos.x(), currentPos.y(), X, Y, Z);
+        emit Mouse3DPositionChanged(X, Y, Z);
+    } catch (...) {
+        // 如果3D转换失败，使用屏幕坐标
+        emit Mouse3DPositionChanged(currentPos.x(), currentPos.y(), 0.0);
+    }
+    
+    // 优先处理草图模式
+    if (IsInSketchMode()) {
+        m_sketchMode->HandleMouseMove(event);
+        return;
+    }
     
     if (m_currentMouseButton == Qt::LeftButton) {
         // Rotate - use absolute position for rotation
@@ -435,6 +496,13 @@ void QtOccView::mouseMoveEvent(QMouseEvent* event) {
 }
 
 void QtOccView::mouseReleaseEvent(QMouseEvent* event) {
+    // 优先处理草图模式
+    if (IsInSketchMode()) {
+        m_sketchMode->HandleMouseRelease(event);
+        m_currentMouseButton = Qt::NoButton;
+        return;
+    }
+    
     Q_UNUSED(event);
     m_currentMouseButton = Qt::NoButton;
 }
@@ -450,6 +518,12 @@ void QtOccView::wheelEvent(QWheelEvent* event) {
 }
 
 void QtOccView::keyPressEvent(QKeyEvent* event) {
+    // 优先处理草图模式
+    if (IsInSketchMode()) {
+        m_sketchMode->HandleKeyPress(event);
+        return;
+    }
+    
     switch (event->key()) {
         case Qt::Key_F:
             FitAll();
@@ -480,6 +554,20 @@ void QtOccView::HandleSelection(const QPoint& point) {
     if (m_context.IsNull()) return;
     
     qDebug() << "HandleSelection called, current selection mode:" << m_currentSelectionMode;
+    
+    // 在新选择开始时清除之前的所有高亮（除了边选择模式，因为边选择支持多选）
+    if (m_currentSelectionMode != 2) { // 不是边选择模式
+        UnhighlightAllVertices();
+        UnhighlightAllFaces();
+        
+        // 清除之前的形状选择
+        if (!m_currentSelectedAIS.IsNull()) {
+            m_context->SetSelected(m_currentSelectedAIS, Standard_False);
+            m_currentSelectedAIS.Nullify();
+            m_currentSelectedShape.reset();
+        }
+        m_context->ClearSelected(Standard_False);
+    }
     
     // Perform selection at click point
     m_context->MoveTo(point.x(), point.y(), m_view, Standard_True);
@@ -554,6 +642,67 @@ void QtOccView::HandleSelection(const QPoint& point) {
             if (selectedCount == 0) {
                 qDebug() << "No objects selected in context";
             }
+        } else if (m_currentSelectionMode == 1) { // Vertex mode
+            // Handle vertex selection
+            qDebug() << "Vertex selection mode detected, attempting to select vertex...";
+            
+            m_context->Select(Standard_True);
+            
+            // Get selected vertex from OpenCASCADE context
+            for (m_context->InitSelected(); m_context->MoreSelected(); m_context->NextSelected()) {
+                Handle(AIS_InteractiveObject) anIO = m_context->SelectedInteractive();
+                Handle(AIS_Shape) aisShape = Handle(AIS_Shape)::DownCast(anIO);
+                
+                if (!aisShape.IsNull()) {
+                    // Get the selected entity (vertex)
+                    Handle(StdSelect_BRepOwner) anOwner = Handle(StdSelect_BRepOwner)::DownCast(m_context->SelectedOwner());
+                    if (!anOwner.IsNull()) {
+                        TopoDS_Shape selectedShape = anOwner->Shape();
+                        qDebug() << "Selected shape type:" << selectedShape.ShapeType() << "TopAbs_VERTEX=" << TopAbs_VERTEX;
+                        
+                        if (selectedShape.ShapeType() == TopAbs_VERTEX) {
+                            TopoDS_Vertex vertex = TopoDS::Vertex(selectedShape);
+                            
+                            // 高亮选中的点
+                            HighlightVertex(vertex);
+                            
+                            qDebug() << "Vertex selected";
+                            break;
+                        }
+                    }
+                }
+            }
+        } else if (m_currentSelectionMode == 4) { // Face mode
+            // Handle face selection for sketch mode
+            qDebug() << "Face selection mode detected, attempting to select face...";
+            
+            m_context->Select(Standard_True);
+            
+            // Get selected face from OpenCASCADE context
+            for (m_context->InitSelected(); m_context->MoreSelected(); m_context->NextSelected()) {
+                Handle(AIS_InteractiveObject) anIO = m_context->SelectedInteractive();
+                Handle(AIS_Shape) aisShape = Handle(AIS_Shape)::DownCast(anIO);
+                
+                if (!aisShape.IsNull()) {
+                    // Get the selected entity (face)
+                    Handle(StdSelect_BRepOwner) anOwner = Handle(StdSelect_BRepOwner)::DownCast(m_context->SelectedOwner());
+                    if (!anOwner.IsNull()) {
+                        TopoDS_Shape selectedShape = anOwner->Shape();
+                        qDebug() << "Selected shape type:" << selectedShape.ShapeType() << "TopAbs_FACE=" << TopAbs_FACE;
+                        
+                        if (selectedShape.ShapeType() == TopAbs_FACE) {
+                            TopoDS_Face face = TopoDS::Face(selectedShape);
+                            
+                            // 高亮选中的面
+                            HighlightFace(face);
+                            
+                            qDebug() << "Face selected, emitting FaceSelected signal";
+                            emit FaceSelected(face);
+                            break;
+                        }
+                    }
+                }
+            }
         } else {
             // Handle shape selection (single selection mode)
             Handle(AIS_InteractiveObject) detectedObj = m_context->DetectedInteractive();
@@ -588,6 +737,24 @@ void QtOccView::HandleSelection(const QPoint& point) {
                 }
             }
         }
+    } else {
+        // 点击了空白区域，清除所有选择和高亮
+        qDebug() << "No object detected, clearing all selections";
+        
+        // 清除所有高亮
+        UnhighlightAllVertices();
+        UnhighlightAllFaces();
+        if (m_currentSelectionMode != 2) { // 在非边选择模式下也清除边高亮
+            UnhighlightAllEdges();
+        }
+        
+        // 清除形状选择
+        if (!m_currentSelectedAIS.IsNull()) {
+            m_context->SetSelected(m_currentSelectedAIS, Standard_False);
+            m_currentSelectedAIS.Nullify();
+            m_currentSelectedShape.reset();
+        }
+        m_context->ClearSelected(Standard_False);
     }
     
     // Force redraw to show selection highlighting
@@ -789,6 +956,163 @@ void QtOccView::UnhighlightAllEdges() {
     
     m_highlightedEdges.clear();
     m_view->Redraw();
+}
+
+void QtOccView::HighlightVertex(const TopoDS_Vertex& vertex) {
+    if (m_context.IsNull()) return;
+    
+    // 使用临时AIS对象显示高亮的点
+    Handle(AIS_Shape) aisVertex = new AIS_Shape(vertex);
+    
+    // 设置点的高亮属性 - 红色球形
+    aisVertex->SetColor(Quantity_NOC_RED);
+    aisVertex->SetWidth(5.0);
+    
+    // 显示高亮的点
+    m_context->Display(aisVertex, Standard_False);
+    
+    // 添加到选中点列表
+    bool alreadySelected = false;
+    for (const auto& existingVertex : m_selectedVertices) {
+        if (vertex.IsSame(existingVertex)) {
+            alreadySelected = true;
+            break;
+        }
+    }
+    
+    if (!alreadySelected) {
+        m_selectedVertices.push_back(vertex);
+        m_highlightedVertices.push_back(aisVertex);
+        qDebug() << "Added vertex to selection, total vertices:" << m_selectedVertices.size();
+    }
+    
+    m_view->Redraw();
+}
+
+void QtOccView::UnhighlightAllVertices() {
+    if (m_context.IsNull()) return;
+    
+    // Remove all highlighted vertices from display
+    for (const auto& highlightedVertex : m_highlightedVertices) {
+        m_context->Remove(highlightedVertex, Standard_False);
+    }
+    
+    m_highlightedVertices.clear();
+    m_selectedVertices.clear();
+    m_view->Redraw();
+}
+
+void QtOccView::HighlightFace(const TopoDS_Face& face) {
+    if (m_context.IsNull()) return;
+    
+    // 使用临时AIS对象显示高亮的面
+    Handle(AIS_Shape) aisFace = new AIS_Shape(face);
+    
+    // 设置面的高亮属性 - 半透明红色
+    aisFace->SetColor(Quantity_NOC_RED);
+    aisFace->SetTransparency(0.3); // 半透明
+    aisFace->SetDisplayMode(AIS_Shaded);
+    
+    // 显示高亮的面
+    m_context->Display(aisFace, Standard_False);
+    
+    // 添加到选中面列表
+    bool alreadySelected = false;
+    for (const auto& existingFace : m_selectedFaces) {
+        if (face.IsSame(existingFace)) {
+            alreadySelected = true;
+            break;
+        }
+    }
+    
+    if (!alreadySelected) {
+        m_selectedFaces.push_back(face);
+        m_highlightedFaces.push_back(aisFace);
+        qDebug() << "Added face to selection, total faces:" << m_selectedFaces.size();
+    }
+    
+    m_view->Redraw();
+}
+
+void QtOccView::UnhighlightAllFaces() {
+    if (m_context.IsNull()) return;
+    
+    // Remove all highlighted faces from display
+    for (const auto& highlightedFace : m_highlightedFaces) {
+        m_context->Remove(highlightedFace, Standard_False);
+    }
+    
+    m_highlightedFaces.clear();
+    m_selectedFaces.clear();
+    m_view->Redraw();
+}
+
+// =============================================================================
+// Sketch Mode Implementation
+// =============================================================================
+
+bool QtOccView::IsInSketchMode() const {
+    return m_sketchMode && m_sketchMode->IsInSketchMode();
+}
+
+void QtOccView::EnterSketchMode(const TopoDS_Face& face) {
+    // Lazy initialization of sketch mode
+    if (!m_sketchMode) {
+        try {
+            m_sketchMode = std::make_unique<SketchMode>(this, this);
+            
+            // Connect sketch mode signals
+            if (m_sketchMode) {
+                connect(m_sketchMode.get(), &SketchMode::sketchModeEntered,
+                        this, &QtOccView::SketchModeEntered);
+                connect(m_sketchMode.get(), &SketchMode::sketchModeExited,
+                        this, &QtOccView::SketchModeExited);
+            }
+            qDebug() << "Sketch mode initialized successfully";
+        }
+        catch (const std::exception& e) {
+            qDebug() << "Failed to initialize sketch mode:" << e.what();
+            return;
+        }
+    }
+    
+    try {
+        if (m_sketchMode->EnterSketchMode(face)) {
+            qDebug() << "Successfully entered sketch mode";
+            emit SketchModeEntered();
+        } else {
+            qDebug() << "Failed to enter sketch mode";
+        }
+    }
+    catch (const std::exception& e) {
+        qDebug() << "Exception in EnterSketchMode:" << e.what();
+    }
+}
+
+void QtOccView::ExitSketchMode() {
+    if (!m_sketchMode) {
+        return;
+    }
+    
+    try {
+        m_sketchMode->ExitSketchMode();
+        
+        qDebug() << "Exited sketch mode";
+        emit SketchModeExited();
+    }
+    catch (const std::exception& e) {
+        qDebug() << "Exception in ExitSketchMode:" << e.what();
+    }
+}
+
+void QtOccView::StartRectangleTool() {
+    if (!m_sketchMode || !m_sketchMode->IsInSketchMode()) {
+        qDebug() << "Cannot start rectangle tool: not in sketch mode";
+        return;
+    }
+    
+    m_sketchMode->StartRectangleTool();
+    qDebug() << "Started rectangle tool";
 }
 
 } // namespace cad_ui

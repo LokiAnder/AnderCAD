@@ -37,7 +37,8 @@ MainWindow::MainWindow(QWidget* parent)
       m_isDragging(false), m_dragStartPosition(), m_titleBar(nullptr),
       m_titleLabel(nullptr), m_minimizeButton(nullptr), m_maximizeButton(nullptr),
       m_closeButton(nullptr), m_currentBooleanDialog(nullptr), m_currentFilletChamferDialog(nullptr),
-      m_currentTransformDialog(nullptr), m_previewActive(false) {
+      m_currentTransformDialog(nullptr), m_previewActive(false), 
+      m_waitingForFaceSelection(false) {
     
     // Load modern flat stylesheet
     QFile styleFile(":/resources/styles.qss");
@@ -257,6 +258,21 @@ void MainWindow::CreateActions() {
     m_transformAction->setShortcut(QKeySequence("Ctrl+T"));
     m_transformAction->setStatusTip("Transform objects (translate, rotate, scale)");
     
+    // Sketch actions
+    m_enterSketchAction = new QAction("Enter &Sketch", this);
+    m_enterSketchAction->setShortcut(QKeySequence("Ctrl+Shift+S"));
+    m_enterSketchAction->setStatusTip("Enter sketch mode");
+    
+    m_exitSketchAction = new QAction("E&xit Sketch", this);
+    m_exitSketchAction->setShortcut(QKeySequence("Escape"));
+    m_exitSketchAction->setStatusTip("Exit sketch mode");
+    m_exitSketchAction->setEnabled(false);  // 初始禁用
+    
+    m_sketchRectangleAction = new QAction("&Rectangle", this);
+    m_sketchRectangleAction->setShortcut(QKeySequence("R"));
+    m_sketchRectangleAction->setStatusTip("Draw rectangle in sketch mode");
+    m_sketchRectangleAction->setEnabled(false);  // 初始禁用
+    
     // Selection mode now handled by combo box - old actions commented out for testing
     
     // Selection mode group now handled by combo box
@@ -331,6 +347,13 @@ void MainWindow::CreateMenus() {
     modifyMenu->addAction(m_chamferAction);
     modifyMenu->addSeparator();
     modifyMenu->addAction(m_transformAction);
+    
+    // Sketch menu
+    QMenu* sketchMenu = menuBar()->addMenu("&Sketch");
+    sketchMenu->addAction(m_enterSketchAction);
+    sketchMenu->addAction(m_exitSketchAction);
+    sketchMenu->addSeparator();
+    sketchMenu->addAction(m_sketchRectangleAction);
     
     // Selection menu - now handled by combo box in toolbar
     
@@ -624,6 +647,62 @@ void MainWindow::CreateToolBars() {
     viewLayout->addStretch();
     toolTabWidget->addTab(viewTab, "视图");
     
+    // Sketch Tab - Sketch mode controls
+    QWidget* sketchTab = new QWidget();
+    QHBoxLayout* sketchLayout = new QHBoxLayout(sketchTab);
+    sketchLayout->setContentsMargins(5, 2, 5, 2);
+    sketchLayout->setSpacing(3);
+    
+    // Sketch mode group
+    QFrame* sketchModeFrame = new QFrame();
+    sketchModeFrame->setFrameStyle(QFrame::StyledPanel);
+    QVBoxLayout* sketchModeLayout = new QVBoxLayout(sketchModeFrame);
+    sketchModeLayout->setContentsMargins(2, 1, 2, 2);
+    sketchModeLayout->setSpacing(1);
+    
+    QLabel* sketchModeLabel = new QLabel("草图模式");
+    sketchModeLabel->setAlignment(Qt::AlignCenter);
+    sketchModeLayout->addWidget(sketchModeLabel);
+    QHBoxLayout* sketchModeButtonsLayout = new QHBoxLayout();
+    sketchModeButtonsLayout->setSpacing(2);
+    
+    QToolButton* enterSketchBtn = new QToolButton();
+    enterSketchBtn->setDefaultAction(m_enterSketchAction);
+    enterSketchBtn->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
+    sketchModeButtonsLayout->addWidget(enterSketchBtn);
+    
+    QToolButton* exitSketchBtn = new QToolButton();
+    exitSketchBtn->setDefaultAction(m_exitSketchAction);
+    exitSketchBtn->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
+    sketchModeButtonsLayout->addWidget(exitSketchBtn);
+    
+    sketchModeLayout->addLayout(sketchModeButtonsLayout);
+    sketchLayout->addWidget(sketchModeFrame);
+    
+    // Sketch tools group
+    QFrame* sketchToolsFrame = new QFrame();
+    sketchToolsFrame->setFrameStyle(QFrame::StyledPanel);
+    QVBoxLayout* sketchToolsLayout = new QVBoxLayout(sketchToolsFrame);
+    sketchToolsLayout->setContentsMargins(2, 1, 2, 2);
+    sketchToolsLayout->setSpacing(1);
+    
+    QLabel* sketchToolsLabel = new QLabel("绘制工具");
+    sketchToolsLabel->setAlignment(Qt::AlignCenter);
+    sketchToolsLayout->addWidget(sketchToolsLabel);
+    QHBoxLayout* sketchToolsButtonsLayout = new QHBoxLayout();
+    sketchToolsButtonsLayout->setSpacing(2);
+    
+    QToolButton* rectangleBtn = new QToolButton();
+    rectangleBtn->setDefaultAction(m_sketchRectangleAction);
+    rectangleBtn->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
+    sketchToolsButtonsLayout->addWidget(rectangleBtn);
+    
+    sketchToolsLayout->addLayout(sketchToolsButtonsLayout);
+    sketchLayout->addWidget(sketchToolsFrame);
+    
+    sketchLayout->addStretch();
+    toolTabWidget->addTab(sketchTab, "草图");
+    
     // Set layout for toolbar area
     QVBoxLayout* toolBarAreaLayout = new QVBoxLayout(toolBarArea);
     toolBarAreaLayout->setContentsMargins(0, 0, 0, 0);
@@ -705,6 +784,11 @@ void MainWindow::ConnectSignals() {
     // Transform operations
     connect(m_transformAction, &QAction::triggered, this, &MainWindow::OnTransformObjects);
     
+    // Sketch actions
+    connect(m_enterSketchAction, &QAction::triggered, this, &MainWindow::OnEnterSketchMode);
+    connect(m_exitSketchAction, &QAction::triggered, this, &MainWindow::OnExitSketchMode);
+    connect(m_sketchRectangleAction, &QAction::triggered, this, &MainWindow::OnSketchRectangleTool);
+    
     // Selection mode combo box connected in CreateSelectionModeCombo()
     
     // Theme actions
@@ -718,6 +802,13 @@ void MainWindow::ConnectSignals() {
     // Viewer signals
     connect(m_viewer, &QtOccView::ShapeSelected, this, &MainWindow::OnShapeSelected);
     connect(m_viewer, &QtOccView::ViewChanged, this, &MainWindow::OnViewChanged);
+    connect(m_viewer, &QtOccView::FaceSelected, this, &MainWindow::OnFaceSelected);
+    connect(m_viewer, &QtOccView::SketchModeEntered, this, &MainWindow::OnSketchModeEntered);
+    connect(m_viewer, &QtOccView::SketchModeExited, this, &MainWindow::OnSketchModeExited);
+    
+    // Mouse position signals
+    //connect(m_viewer, &QtOccView::MousePositionChanged, m_statusBar, &StatusBar::updateMousePosition2D);
+    //connect(m_viewer, &QtOccView::Mouse3DPositionChanged, m_statusBar, &StatusBar::updateMousePosition);
     
     // Document tree signals for selection synchronization
     connect(m_documentTree, &DocumentTree::ShapeSelected, this, &MainWindow::OnDocumentTreeShapeSelected);
@@ -1918,6 +2009,179 @@ void MainWindow::OnTransformResetRequested() {
     
     // Update display
     m_viewer->update();
+}
+
+// =============================================================================
+// Sketch Mode Implementation
+// =============================================================================
+
+void MainWindow::OnEnterSketchMode() {
+    if (!m_viewer) {
+        qDebug() << "Error: No viewer available";
+        return;
+    }
+    
+    try {
+        // 检查是否已经在草图模式中
+        if (m_viewer->IsInSketchMode()) {
+            qDebug() << "Already in sketch mode";
+            return;
+        }
+        
+        // 检查是否有可用的对象
+        auto shapes = m_ocafManager->GetAllShapes();
+        if (shapes.empty()) {
+            if (m_statusBar) {
+                statusBar()->showMessage("请先创建一个几何体（如盒子），然后选择一个面进入草图模式");
+            }
+            qDebug() << "No shapes available for face selection";
+            return;
+        }
+        
+        // 创建并显示面选择对话框
+        FaceSelectionDialog* dialog = new FaceSelectionDialog(m_viewer, this);
+        
+        // 连接对话框信号
+        connect(dialog, &FaceSelectionDialog::faceSelected, this, [this, dialog](const TopoDS_Face& face) {
+            OnFaceSelectedForSketch(face);
+            dialog->close();
+            dialog->deleteLater();
+        });
+        
+        connect(dialog, &FaceSelectionDialog::selectionCancelled, this, [this, dialog]() {
+            if (m_statusBar) {
+                statusBar()->showMessage("草图模式已取消");
+            }
+            dialog->close();
+            dialog->deleteLater();
+        });
+        
+        // 显示对话框 (非模态)
+        dialog->show();
+        
+        qDebug() << "Face selection dialog shown";
+    }
+    catch (const std::exception& e) {
+        qDebug() << "Error in OnEnterSketchMode:" << e.what();
+        if (m_statusBar) {
+            statusBar()->showMessage("进入草图模式失败");
+        }
+    }
+}
+
+void MainWindow::OnExitSketchMode() {
+    if (!m_viewer || !m_viewer->IsInSketchMode()) {
+        return;
+    }
+    
+    m_viewer->ExitSketchMode();
+}
+
+void MainWindow::OnSketchRectangleTool() {
+    if (!m_viewer || !m_viewer->IsInSketchMode()) {
+        return;
+    }
+    
+    m_viewer->StartRectangleTool();
+    statusBar()->showMessage("矩形工具已激活 - 点击并拖拽创建矩形");
+}
+
+void MainWindow::OnFaceSelected(const TopoDS_Face& face) {
+    if (!m_waitingForFaceSelection) {
+        return;
+    }
+    
+    try {
+        m_waitingForFaceSelection = false;
+        m_selectedFace = face;
+        
+        // 检查面是否有效
+        if (face.IsNull()) {
+            qDebug() << "Error: Selected face is null";
+            if (m_statusBar) {
+                statusBar()->showMessage("选择的面无效");
+            }
+            return;
+        }
+        
+        // Enter sketch mode with the selected face
+        if (m_viewer) {
+            m_viewer->EnterSketchMode(face);
+        } else {
+            qDebug() << "Error: No viewer available for sketch mode";
+        }
+        
+        qDebug() << "Face selected, entering sketch mode";
+    }
+    catch (const std::exception& e) {
+        qDebug() << "Error in OnFaceSelected:" << e.what();
+        if (m_statusBar) {
+            statusBar()->showMessage(QString("进入草图模式失败: %1").arg(e.what()));
+        }
+        m_waitingForFaceSelection = false;
+    }
+}
+
+void MainWindow::OnFaceSelectedForSketch(const TopoDS_Face& face) {
+    try {
+        // 检查面是否有效
+        if (face.IsNull()) {
+            qDebug() << "Error: Selected face is null";
+            if (m_statusBar) {
+                statusBar()->showMessage("选择的面无效");
+            }
+            return;
+        }
+        
+        // 直接进入草图模式
+        if (m_viewer) {
+            m_viewer->EnterSketchMode(face);
+            if (m_statusBar) {
+                statusBar()->showMessage("正在进入草图模式...");
+            }
+        } else {
+            qDebug() << "Error: No viewer available for sketch mode";
+            if (m_statusBar) {
+                statusBar()->showMessage("视图不可用");
+            }
+        }
+        
+        qDebug() << "Face selected from dialog, entering sketch mode";
+    }
+    catch (const std::exception& e) {
+        qDebug() << "Error in OnFaceSelectedForSketch:" << e.what();
+        if (m_statusBar) {
+            statusBar()->showMessage(QString("进入草图模式失败: %1").arg(e.what()));
+        }
+    }
+}
+
+void MainWindow::OnSketchModeEntered() {
+    // Update UI state when sketch mode is entered
+    m_enterSketchAction->setEnabled(false);
+    m_exitSketchAction->setEnabled(true);
+    m_sketchRectangleAction->setEnabled(true);
+    
+    // Reset selection mode
+    m_viewer->SetSelectionMode(0);  // Shape selection mode
+    
+    statusBar()->showMessage(QString("已进入草图模式 - 选择绘制工具开始绘制"));
+    
+    qDebug() << "Sketch mode entered, UI updated";
+}
+
+void MainWindow::OnSketchModeExited() {
+    // Update UI state when sketch mode is exited
+    m_enterSketchAction->setEnabled(true);
+    m_exitSketchAction->setEnabled(false);
+    m_sketchRectangleAction->setEnabled(false);
+    
+    // Reset any waiting states
+    m_waitingForFaceSelection = false;
+    
+    statusBar()->showMessage("已退出草图模式");
+    
+    qDebug() << "Sketch mode exited, UI updated";
 }
 
 } // namespace cad_ui

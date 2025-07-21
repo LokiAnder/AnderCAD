@@ -64,7 +64,11 @@ public:
     std::vector<TopoDS_Edge> GetSelectedTopoEdges() const { return m_selectedEdges; }
     std::map<cad_core::ShapePtr, std::vector<TopoDS_Edge>> GetSelectedEdgesByShape() const;
     void HighlightEdge(const TopoDS_Edge& edge);
+    void HighlightVertex(const TopoDS_Vertex& vertex);
+    void HighlightFace(const TopoDS_Face& face);
     void UnhighlightAllEdges();
+    void UnhighlightAllVertices();
+    void UnhighlightAllFaces();
     
     // 高级选择方法
     std::vector<cad_core::SelectionInfo> GetSelectedShapes() const;
@@ -75,16 +79,31 @@ public:
     // 选择管理器访问
     cad_core::SelectionManager* GetSelectionManager() { return m_selectionManager.get(); }
     
+    // 视图访问
+    Handle(V3d_View) GetView() const { return m_view; }
+    Handle(AIS_InteractiveContext) GetContext() const { return m_context; }
+    
     // 网格
     void ShowGrid(bool show);
     void SetGridSpacing(double spacing);
     
     // 坐标轴
     void ShowAxes(bool show);
+    
+    // 草图模式支持
+    bool IsInSketchMode() const;
+    void EnterSketchMode(const TopoDS_Face& face);
+    void ExitSketchMode();
+    void StartRectangleTool();
 
 signals:
     void ShapeSelected(const cad_core::ShapePtr& shape);
+    void FaceSelected(const TopoDS_Face& face);
     void ViewChanged();
+    void SketchModeEntered();
+    void SketchModeExited();
+    void MousePositionChanged(int x, int y);
+    void Mouse3DPositionChanged(double x, double y, double z);
 
 protected:
     void paintEvent(QPaintEvent* event) override;
@@ -127,6 +146,17 @@ private:
     std::vector<TopoDS_Edge> m_selectedEdges;
     std::vector<Handle(AIS_InteractiveObject)> m_highlightedEdges;
     std::vector<cad_core::ShapePtr> m_edgeParentShapes;  // 跟踪每个边的父形状（与m_selectedEdges索引相同）
+    
+    // 用于点选择的高亮状态
+    std::vector<TopoDS_Vertex> m_selectedVertices;
+    std::vector<Handle(AIS_InteractiveObject)> m_highlightedVertices;
+    
+    // 用于面选择的高亮状态
+    std::vector<TopoDS_Face> m_selectedFaces;
+    std::vector<Handle(AIS_InteractiveObject)> m_highlightedFaces;
+    
+    // 草图模式
+    std::unique_ptr<class SketchMode> m_sketchMode;
     
     // 当前选择模式
     int m_currentSelectionMode;

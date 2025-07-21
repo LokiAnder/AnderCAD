@@ -15,6 +15,8 @@ set(HEADERS
     include/cad_ui/BooleanOperationDialog.h
     include/cad_ui/FilletChamferDialog.h
     include/cad_ui/TransformOperationDialog.h
+    include/cad_ui/SketchMode.h
+    include/cad_ui/FaceSelectionDialog.h
 )
 
 # 源文件
@@ -32,6 +34,8 @@ set(SOURCES
     src/BooleanOperationDialog.cpp
     src/FilletChamferDialog.cpp
     src/TransformOperationDialog.cpp
+    src/SketchMode.cpp
+    src/FaceSelectionDialog.cpp
 )
 
 # 资源文件

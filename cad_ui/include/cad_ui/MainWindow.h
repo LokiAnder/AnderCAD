@@ -28,6 +28,7 @@
 #include "BooleanOperationDialog.h"
 #include "FilletChamferDialog.h"
 #include "TransformOperationDialog.h"
+#include "FaceSelectionDialog.h"
 #include "cad_core/CommandManager.h"
 #include "cad_core/OCAFManager.h"
 #include "cad_core/TransformCommand.h"
@@ -135,6 +136,11 @@ private slots:
     // 变换操作
     void OnTransformObjects();
     
+    // 草图操作
+    void OnEnterSketchMode();
+    void OnExitSketchMode();
+    void OnSketchRectangleTool();
+    
     // 对话框交互槽
     void OnSelectionModeChanged(bool enabled, const QString& prompt);
     void OnObjectSelected(const cad_core::ShapePtr& shape);
@@ -150,6 +156,12 @@ private slots:
     
     // 选择模式组合框
     void OnSelectionModeComboChanged(int index);
+    
+    // 草图模式信号
+    void OnSketchModeEntered();
+    void OnSketchModeExited();
+    void OnFaceSelected(const TopoDS_Face& face);
+    void OnFaceSelectedForSketch(const TopoDS_Face& face);
     
     void OnShapeSelected(const cad_core::ShapePtr& shape);
     void OnViewChanged();
@@ -196,6 +208,10 @@ private:
     // Transform preview support
     std::vector<cad_core::ShapePtr> m_previewShapes;
     bool m_previewActive;
+    
+    // Sketch mode support
+    bool m_waitingForFaceSelection;
+    TopoDS_Face m_selectedFace;
     
     void CreateMenus();
     void CreateToolBars();
@@ -255,6 +271,11 @@ private:
     
     // Transform operations
     QAction* m_transformAction;
+    
+    // Sketch mode actions
+    QAction* m_enterSketchAction;
+    QAction* m_exitSketchAction;
+    QAction* m_sketchRectangleAction;
     
     // Selection mode combo box
     QComboBox* m_selectionModeCombo;
