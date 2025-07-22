@@ -1,11 +1,10 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<RCC version="1.0">
+<RCC>
     <qresource prefix="/icons">
-        <!-- Placeholder for future icons -->
+        <file>icons/close.svg</file>
+        <file>icons/low_density.svg</file>
+        <file>icons/minimize.svg</file>
     </qresource>
-    <qresource prefix="/images">
-        <!-- Placeholder for future images -->
-    </qresource>
+    <qresource prefix="/images"/>
     <qresource prefix="/resources">
         <file>styles.qss</file>
     </qresource>

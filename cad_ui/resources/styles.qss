@@ -16,7 +16,7 @@
 
 /* Main Application */
 QMainWindow {
-    background-color: #F5F5F5;
+    background-color: #E0E0E0;
     color: #333333;
     font-family: "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
     font-size: 9pt;
@@ -30,6 +30,7 @@ QMenuBar {
     border-bottom: 1px solid #E0E0E0;
     padding: 4px 8px;
     font-weight: 500;
+    
 }
 
 QMenuBar::item {
@@ -817,7 +818,7 @@ QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus, QComboBox:focus {
 /* Custom Title Bar for Frameless Window */
 QWidget#titleBar {
     background-color: #2F2F2F;
-    border-bottom: 1px solid #009999;
+    border-bottom: 1px solid #2d2d2d;
     min-height: 40px;
     max-height: 40px;
 }
@@ -830,8 +831,9 @@ QLabel#titleLabel {
 }
 
 /* Window Control Buttons */
-QPushButton#windowControlButton {
-    background-color: transparent;
+QPushButton#minimizeButton,QPushButton#maximizeButton,QPushButton#closeButton
+ {
+    background-color: #2F2F2F;
     border: none;
     color: #FFFFFF;
     font-size: 16px;
@@ -843,16 +845,13 @@ QPushButton#windowControlButton {
     border-radius: 0px;
 }
 
-QPushButton#windowControlButton:hover {
-    background-color: #009999;
-}
 
 QPushButton#minimizeButton:hover {
-    background-color: #009999;
+    background-color: #8c8c8c;
 }
 
 QPushButton#maximizeButton:hover {
-    background-color: #009999;
+    background-color: #8c8c8c;
 }
 
 QPushButton#closeButton:hover {

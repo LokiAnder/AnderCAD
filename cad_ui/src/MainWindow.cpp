@@ -50,7 +50,7 @@ MainWindow::MainWindow(QWidget* parent)
     } else {
         qDebug() << "Failed to load stylesheet from resources";
         // Fallback: try to load from file system for development
-        QFile fallbackFile("D:\\_Workdir\\Claude\\Ander_CAD\\cad_ui\\resources\\styles.qss");
+        QFile fallbackFile("D:\\_Workdir\\CADbase\\occTraining\\AnderCAD\\cad_ui\\resources\\styles.qss");
         if (fallbackFile.open(QFile::ReadOnly | QFile::Text)) {
             QTextStream fallbackStream(&fallbackFile);
             QString fallbackStyle = fallbackStream.readAll();
@@ -127,8 +127,6 @@ MainWindow::MainWindow(QWidget* parent)
 }
 
 bool MainWindow::Initialize() {
-    // Note: OpenCASCADE viewer will be initialized automatically when widget is ready
-    // No need to force initialization here
     
     // Initialize OCAF manager
     if (!m_ocafManager->Initialize()) {
@@ -1469,6 +1467,7 @@ void MainWindow::CreateTitleBar() {
     m_titleLabel->setObjectName("titleLabel");
     
     // Create window control buttons
+	// 最小化按钮、最大化按钮、关闭按钮
     m_minimizeButton = new QPushButton("−", m_titleBar);
     m_minimizeButton->setObjectName("minimizeButton");
     m_minimizeButton->setFixedSize(40, 40);
@@ -1484,13 +1483,6 @@ void MainWindow::CreateTitleBar() {
     m_closeButton->setFixedSize(40, 40);
     m_closeButton->setToolTip("Close");
     
-    // Apply common style to all control buttons
-    QString buttonStyle = "QPushButton { "
-                         "background-color: transparent; border: none; color: #FFFFFF; "
-                         "font-size: 16px; font-weight: bold; }";
-    m_minimizeButton->setStyleSheet(buttonStyle);
-    m_maximizeButton->setStyleSheet(buttonStyle);
-    m_closeButton->setStyleSheet(buttonStyle);
     
     // Layout for title bar
     QHBoxLayout* titleLayout = new QHBoxLayout(m_titleBar);
