@@ -1,8 +1,51 @@
 <RCC>
     <qresource prefix="/icons">
+        <!-- Window control icons -->
         <file>icons/close.svg</file>
         <file>icons/low_density.svg</file>
         <file>icons/minimize.svg</file>
+        
+        <!-- Boolean operation icons -->
+        <file>icons/Boolean-Common.svg</file>
+        <file>icons/Boolean-Cut.svg</file>
+        <file>icons/Boolean-Fuse.svg</file>
+        
+        <!-- Create and reference icons -->
+        <file>icons/Create-Reference.svg</file>
+        
+        <!-- Feature icons -->
+        <file>icons/Feature-BoxJoint.svg</file>
+        <file>icons/Feature-HalvedJoint.svg</file>
+        
+        <!-- Form operation icons -->
+        <file>icons/Form-Extrude.svg</file>
+        <file>icons/Form-ImprintCutout.svg</file>
+        <file>icons/Form-ImprintLower.svg</file>
+        <file>icons/Form-ImprintRaise.svg</file>
+        <file>icons/Form-Loft.svg</file>
+        <file>icons/Form-Pipe.svg</file>
+        <file>icons/Form-Revolve.svg</file>
+        <file>icons/Form-Taper.svg</file>
+        
+        <!-- Modification icons -->
+        <file>icons/Mod-Chamfer.svg</file>
+        <file>icons/Mod-CrossSection.svg</file>
+        <file>icons/Mod-Fillet.svg</file>
+        <file>icons/Mod-FlangeSheet.svg</file>
+        <file>icons/Mod-Offset.svg</file>
+        <file>icons/Mod-Scale.svg</file>
+        <file>icons/Mod-UnfoldSheet.svg</file>
+        
+        <!-- Multiply/Array icons -->
+        <file>icons/Multiply-CircularArray.svg</file>
+        <file>icons/Multiply-LinearArray.svg</file>
+        <file>icons/Multiply-Mirror.svg</file>
+        
+        <!-- Primitive shape icons -->
+        <file>icons/Prim-Box.svg</file>
+        <file>icons/Prim-Cylinder.svg</file>
+        <file>icons/Prim-Sketch.svg</file>
+        <file>icons/Prim-Sphere.svg</file>
     </qresource>
     <qresource prefix="/images"/>
     <qresource prefix="/resources">

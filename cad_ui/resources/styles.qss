@@ -103,8 +103,8 @@ QToolBar QToolButton {
     border-radius: 6px;
     padding: 8px;
     margin: 2px;
-    min-width: 80px;
-    min-height: 80px;
+    min-width: 50px;
+    min-height: 50px;
     color: #333333;
     font-weight: 500;
     font-size: 8pt;
@@ -117,10 +117,10 @@ QTabWidget#toolTabWidget QToolButton {
     border-radius: 6px;
     padding: 6px 4px 8px 4px; /* top right bottom left - more space for text */
     margin: 2px;
-    min-width: 90px;
-    min-height: 90px;
-    max-width: 90px;
-    max-height: 90px;
+    min-width: 40px;
+    min-height: 40px;
+    max-width: 40px;
+    max-height: 40px;
     color: #333333;
     font-weight: 500;
     font-size: 9pt;

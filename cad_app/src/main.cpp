@@ -24,6 +24,9 @@
 
 #include "cad_ui/MainWindow.h"   // 我们的主窗口 - 用户界面的"指挥中心"
 
+// QRC资源初始化函数声明 - 手动初始化静态库中的资源
+extern int qInitResources_resources();
+
 // OpenCASCADE的初始化相关头文件 - 让几何计算引擎苏醒
 #include <Standard_Version.hxx>      // 版本信息 - 知己知彼
 #include <Message.hxx>               // 消息系统 - OpenCASCADE的"嘴巴"
@@ -39,6 +42,9 @@ int main(int argc, char *argv[])
 {
     // 创建Qt应用程序对象 - 这是一切的开始！
     QApplication app(argc, argv);
+    
+    // 手动初始化QRC资源 - 确保静态库中的资源能被正确加载
+    qInitResources_resources();
     
     // 设置应用程序属性 - 给我们的程序一个"身份证"
     app.setApplicationName("Ander CAD");        // 应用名称 - 我们的"艺名"

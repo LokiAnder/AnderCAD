@@ -12,6 +12,7 @@
 #include "cad_core/SelectionManager.h"
 #include <TopoDS.hxx>
 
+#include <iostream>
 #include <QApplication>
 #include <QFileDialog>
 #include <QMessageBox>
@@ -46,11 +47,11 @@ MainWindow::MainWindow(QWidget* parent)
         QTextStream stream(&styleFile);
         QString style = stream.readAll();
         this->setStyleSheet(style);
-        qDebug() << "Stylesheet loaded successfully, length:" << style.length();
+        qDebug() << "Stylesheet loaded successfully from QRC, length:" << style.length();
     } else {
-        qDebug() << "Failed to load stylesheet from resources";
+        qDebug() << "Failed to load stylesheet from QRC resources";
         // Fallback: try to load from file system for development
-        QFile fallbackFile("D:\\_Workdir\\CADbase\\occTraining\\AnderCAD\\cad_ui\\resources\\styles.qss");
+        QFile fallbackFile("");
         if (fallbackFile.open(QFile::ReadOnly | QFile::Text)) {
             QTextStream fallbackStream(&fallbackFile);
             QString fallbackStyle = fallbackStream.readAll();
@@ -221,34 +222,61 @@ void MainWindow::CreateActions() {
     m_projectionModeGroup->addAction(m_viewOrthographicAction);
     m_projectionModeGroup->addAction(m_viewPerspectiveAction);
     
-    // Create actions
-    m_createBoxAction = new QAction("Create &Box", this);
+    // Create actions with 30x30 icons (icon-only display)
+    m_createBoxAction = new QAction("", this);
+    QIcon boxIcon(":/icons/icons/Prim-Box.svg");
+    boxIcon.addPixmap(QPixmap(":/icons/icons/Prim-Box.svg").scaled(30, 30, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    m_createBoxAction->setIcon(boxIcon);
     m_createBoxAction->setStatusTip("Create a box");
     
-    m_createCylinderAction = new QAction("Create &Cylinder", this);
+    m_createCylinderAction = new QAction("", this);
+    QIcon cylinderIcon(":/icons/icons/Prim-Cylinder.svg");
+    cylinderIcon.addPixmap(QPixmap(":/icons/icons/Prim-Cylinder.svg").scaled(30, 30, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    m_createCylinderAction->setIcon(cylinderIcon);
     m_createCylinderAction->setStatusTip("Create a cylinder");
     
-    m_createSphereAction = new QAction("Create &Sphere", this);
+    m_createSphereAction = new QAction("", this);
+    QIcon sphereIcon(":/icons/icons/Prim-Sphere.svg");
+    sphereIcon.addPixmap(QPixmap(":/icons/icons/Prim-Sphere.svg").scaled(30, 30, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    m_createSphereAction->setIcon(sphereIcon);
     m_createSphereAction->setStatusTip("Create a sphere");
     
-    m_createExtrudeAction = new QAction("Create &Extrude", this);
+    m_createExtrudeAction = new QAction("", this);
+    QIcon extrudeIcon(":/icons/icons/Form-Extrude.svg");
+    extrudeIcon.addPixmap(QPixmap(":/icons/icons/Form-Extrude.svg").scaled(30, 30, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    m_createExtrudeAction->setIcon(extrudeIcon);
     m_createExtrudeAction->setStatusTip("Create an extrude feature");
     
-    // Boolean operations
-    m_booleanUnionAction = new QAction("&Union", this);
-    m_booleanUnionAction->setStatusTip("Unite selected shapes");
+    // Boolean operations with 30x30 icons (icon-only display)
+    m_booleanUnionAction = new QAction("", this);
+    QIcon fuseIcon(":/icons/icons/Boolean-Fuse.svg");
+    fuseIcon.addPixmap(QPixmap(":/icons/icons/Boolean-Fuse.svg").scaled(30, 30, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    m_booleanUnionAction->setIcon(fuseIcon);
+    m_booleanUnionAction->setStatusTip("合并选中的形状");
     
-    m_booleanIntersectionAction = new QAction("&Intersection", this);
-    m_booleanIntersectionAction->setStatusTip("Intersect selected shapes");
+    m_booleanIntersectionAction = new QAction("", this);
+    QIcon commonIcon(":/icons/icons/Boolean-Common.svg");
+    commonIcon.addPixmap(QPixmap(":/icons/icons/Boolean-Common.svg").scaled(30, 30, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    m_booleanIntersectionAction->setIcon(commonIcon);
+    m_booleanIntersectionAction->setStatusTip("获取选中形状的交集");
     
-    m_booleanDifferenceAction = new QAction("&Difference", this);
-    m_booleanDifferenceAction->setStatusTip("Subtract one shape from another");
+    m_booleanDifferenceAction = new QAction("", this);
+    QIcon cutIcon(":/icons/icons/Boolean-Cut.svg");
+    cutIcon.addPixmap(QPixmap(":/icons/icons/Boolean-Cut.svg").scaled(30, 30, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    m_booleanDifferenceAction->setIcon(cutIcon);
+    m_booleanDifferenceAction->setStatusTip("从一个形状中减去另一个形状");
     
-    // Fillet and chamfer operations
-    m_filletAction = new QAction("&Fillet", this);
+    // Fillet and chamfer operations with 30x30 icons (icon-only display)
+    m_filletAction = new QAction("", this);
+    QIcon filletIcon(":/icons/icons/Mod-Fillet.svg");
+    filletIcon.addPixmap(QPixmap(":/icons/icons/Mod-Fillet.svg").scaled(30, 30, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    m_filletAction->setIcon(filletIcon);
     m_filletAction->setStatusTip("Add fillet to selected edges");
     
-    m_chamferAction = new QAction("&Chamfer", this);
+    m_chamferAction = new QAction("", this);
+    QIcon chamferIcon(":/icons/icons/Mod-Chamfer.svg");
+    chamferIcon.addPixmap(QPixmap(":/icons/icons/Mod-Chamfer.svg").scaled(30, 30, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    m_chamferAction->setIcon(chamferIcon);
     m_chamferAction->setStatusTip("Add chamfer to selected edges");
     
     // Transform actions
@@ -370,8 +398,8 @@ void MainWindow::CreateToolBars() {
     // Create main toolbar area widget with tabs
     QWidget* toolBarArea = new QWidget(this);
     toolBarArea->setObjectName("toolBarArea");
-    toolBarArea->setMaximumHeight(150);
-    toolBarArea->setMinimumHeight(150);
+    toolBarArea->setMaximumHeight(180);
+    toolBarArea->setMinimumHeight(180);
     
     // Create tab widget for organizing tools
     QTabWidget* toolTabWidget = new QTabWidget(toolBarArea);
@@ -381,7 +409,7 @@ void MainWindow::CreateToolBars() {
     // File Tab - File operations and undo/redo
     QWidget* fileTab = new QWidget();
     QHBoxLayout* fileLayout = new QHBoxLayout(fileTab);
-    fileLayout->setContentsMargins(5, 2, 5, 2);
+    fileLayout->setContentsMargins(5, 5, 5, 5);
     fileLayout->setSpacing(3);
     
     // File operations group
@@ -400,8 +428,8 @@ void MainWindow::CreateToolBars() {
     QToolButton* newBtn = new QToolButton();
     newBtn->setDefaultAction(m_newAction);
     newBtn->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
-    newBtn->setMinimumSize(90, 90);
-    newBtn->setMaximumSize(90, 90);
+    newBtn->setMinimumSize(40, 40);
+    newBtn->setMaximumSize(40, 40);
     fileButtonsLayout->addWidget(newBtn);
     
     QToolButton* openBtn = new QToolButton();
@@ -457,36 +485,72 @@ void MainWindow::CreateToolBars() {
     // Design Tab - Primitive creation
     QWidget* designTab = new QWidget();
     QHBoxLayout* designLayout = new QHBoxLayout(designTab);
-    designLayout->setContentsMargins(5, 2, 5, 2);
+    designLayout->setContentsMargins(5, 5, 5, 5);
     designLayout->setSpacing(3);
     
     // Primitives group
     QFrame* primitivesFrame = new QFrame();
     primitivesFrame->setFrameStyle(QFrame::StyledPanel);
     QVBoxLayout* primitivesLayout = new QVBoxLayout(primitivesFrame);
-    primitivesLayout->setContentsMargins(2, 1, 2, 2);
+    primitivesLayout->setContentsMargins(5, 3, 5, 8);
     primitivesLayout->setSpacing(1);
     
     QLabel* primitivesLabel = new QLabel("基本形状");
     primitivesLabel->setAlignment(Qt::AlignCenter);
     primitivesLayout->addWidget(primitivesLabel);
     QHBoxLayout* primitivesButtonsLayout = new QHBoxLayout();
-    primitivesButtonsLayout->setSpacing(2);
+    primitivesButtonsLayout->setSpacing(8);
     
+    // Box button with label below
+    QVBoxLayout* boxLayout = new QVBoxLayout();
     QToolButton* boxBtn = new QToolButton();
     boxBtn->setDefaultAction(m_createBoxAction);
-    boxBtn->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
-    primitivesButtonsLayout->addWidget(boxBtn);
+    boxBtn->setToolButtonStyle(Qt::ToolButtonIconOnly);
+    boxBtn->setIconSize(QSize(30, 30));
+    boxBtn->setFixedSize(30, 30);
+    boxBtn->setStyleSheet("QToolButton { border-radius: 8px; border: 1px solid #ccc; background-color: #f0f0f0; } QToolButton:hover { background-color: #e0e0e0; } QToolButton:pressed { background-color: #d0d0d0; }");
+    QLabel* boxLabel = new QLabel("长方体");
+    boxLabel->setAlignment(Qt::AlignCenter);
+    boxLabel->setStyleSheet("font-size: 9px; color: #333; margin-top: 2px;");
+    boxLayout->addWidget(boxBtn);
+    boxLayout->addWidget(boxLabel);
+    boxLayout->setSpacing(1);
+    boxLayout->setContentsMargins(0, 0, 0, 0);
+    primitivesButtonsLayout->addLayout(boxLayout);
     
+    // Cylinder button with label below
+    QVBoxLayout* cylinderLayout = new QVBoxLayout();
     QToolButton* cylinderBtn = new QToolButton();
     cylinderBtn->setDefaultAction(m_createCylinderAction);
-    cylinderBtn->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
-    primitivesButtonsLayout->addWidget(cylinderBtn);
+    cylinderBtn->setToolButtonStyle(Qt::ToolButtonIconOnly);
+    cylinderBtn->setIconSize(QSize(30, 30));
+    cylinderBtn->setFixedSize(30, 30);
+    cylinderBtn->setStyleSheet("QToolButton { border-radius: 8px; border: 1px solid #ccc; background-color: #f0f0f0; } QToolButton:hover { background-color: #e0e0e0; } QToolButton:pressed { background-color: #d0d0d0; }");
+    QLabel* cylinderLabel = new QLabel("圆柱体");
+    cylinderLabel->setAlignment(Qt::AlignCenter);
+    cylinderLabel->setStyleSheet("font-size: 9px; color: #333; margin-top: 2px;");
+    cylinderLayout->addWidget(cylinderBtn);
+    cylinderLayout->addWidget(cylinderLabel);
+    cylinderLayout->setSpacing(1);
+    cylinderLayout->setContentsMargins(0, 0, 0, 0);
+    primitivesButtonsLayout->addLayout(cylinderLayout);
     
+    // Sphere button with label below
+    QVBoxLayout* sphereLayout = new QVBoxLayout();
     QToolButton* sphereBtn = new QToolButton();
     sphereBtn->setDefaultAction(m_createSphereAction);
-    sphereBtn->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
-    primitivesButtonsLayout->addWidget(sphereBtn);
+    sphereBtn->setToolButtonStyle(Qt::ToolButtonIconOnly);
+    sphereBtn->setIconSize(QSize(30, 30));
+    sphereBtn->setFixedSize(30, 30);
+    sphereBtn->setStyleSheet("QToolButton { border-radius: 8px; border: 1px solid #ccc; background-color: #f0f0f0; } QToolButton:hover { background-color: #e0e0e0; } QToolButton:pressed { background-color: #d0d0d0; }");
+    QLabel* sphereLabel = new QLabel("球体");
+    sphereLabel->setAlignment(Qt::AlignCenter);
+    sphereLabel->setStyleSheet("font-size: 9px; color: #333; margin-top: 2px;");
+    sphereLayout->addWidget(sphereBtn);
+    sphereLayout->addWidget(sphereLabel);
+    sphereLayout->setSpacing(1);
+    sphereLayout->setContentsMargins(0, 0, 0, 0);
+    primitivesButtonsLayout->addLayout(sphereLayout);
     
     primitivesLayout->addLayout(primitivesButtonsLayout);
     designLayout->addWidget(primitivesFrame);
@@ -495,19 +559,31 @@ void MainWindow::CreateToolBars() {
     QFrame* featuresFrame = new QFrame();
     featuresFrame->setFrameStyle(QFrame::StyledPanel);
     QVBoxLayout* featuresLayout = new QVBoxLayout(featuresFrame);
-    featuresLayout->setContentsMargins(2, 1, 2, 2);
+    featuresLayout->setContentsMargins(5, 3, 5, 8);
     featuresLayout->setSpacing(1);
     
     QLabel* featuresLabel = new QLabel("特征");
     featuresLabel->setAlignment(Qt::AlignCenter);
     featuresLayout->addWidget(featuresLabel);
     QHBoxLayout* featuresButtonsLayout = new QHBoxLayout();
-    featuresButtonsLayout->setSpacing(2);
+    featuresButtonsLayout->setSpacing(8);
     
+    // Extrude button with label below
+    QVBoxLayout* extrudeLayout = new QVBoxLayout();
     QToolButton* extrudeBtn = new QToolButton();
     extrudeBtn->setDefaultAction(m_createExtrudeAction);
-    extrudeBtn->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
-    featuresButtonsLayout->addWidget(extrudeBtn);
+    extrudeBtn->setToolButtonStyle(Qt::ToolButtonIconOnly);
+    extrudeBtn->setIconSize(QSize(30, 30));
+    extrudeBtn->setFixedSize(30, 30);
+    extrudeBtn->setStyleSheet("QToolButton { border-radius: 8px; border: 1px solid #ccc; background-color: #f0f0f0; } QToolButton:hover { background-color: #e0e0e0; } QToolButton:pressed { background-color: #d0d0d0; }");
+    QLabel* extrudeLabel = new QLabel("拉伸");
+    extrudeLabel->setAlignment(Qt::AlignCenter);
+    extrudeLabel->setStyleSheet("font-size: 9px; color: #333; margin-top: 2px;");
+    extrudeLayout->addWidget(extrudeBtn);
+    extrudeLayout->addWidget(extrudeLabel);
+    extrudeLayout->setSpacing(1);
+    extrudeLayout->setContentsMargins(0, 0, 0, 0);
+    featuresButtonsLayout->addLayout(extrudeLayout);
     
     featuresLayout->addLayout(featuresButtonsLayout);
     designLayout->addWidget(featuresFrame);
@@ -518,36 +594,72 @@ void MainWindow::CreateToolBars() {
     // Modify Tab - Boolean operations and modifications
     QWidget* modifyTab = new QWidget();
     QHBoxLayout* modifyLayout = new QHBoxLayout(modifyTab);
-    modifyLayout->setContentsMargins(5, 2, 5, 2);
+    modifyLayout->setContentsMargins(5, 5, 5, 5);
     modifyLayout->setSpacing(3);
     
     // Boolean operations group
     QFrame* booleanFrame = new QFrame();
     booleanFrame->setFrameStyle(QFrame::StyledPanel);
     QVBoxLayout* booleanLayout = new QVBoxLayout(booleanFrame);
-    booleanLayout->setContentsMargins(2, 1, 2, 2);
+    booleanLayout->setContentsMargins(5, 3, 5, 8);
     booleanLayout->setSpacing(1);
     
     QLabel* booleanLabel = new QLabel("布尔运算");
     booleanLabel->setAlignment(Qt::AlignCenter);
     booleanLayout->addWidget(booleanLabel);
     QHBoxLayout* booleanButtonsLayout = new QHBoxLayout();
-    booleanButtonsLayout->setSpacing(2);
+    booleanButtonsLayout->setSpacing(8);
     
+    // Union button with label below
+    QVBoxLayout* unionLayout = new QVBoxLayout();
     QToolButton* unionBtn = new QToolButton();
     unionBtn->setDefaultAction(m_booleanUnionAction);
-    unionBtn->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
-    booleanButtonsLayout->addWidget(unionBtn);
+    unionBtn->setToolButtonStyle(Qt::ToolButtonIconOnly);
+    unionBtn->setIconSize(QSize(30, 30));
+    unionBtn->setFixedSize(30, 30);
+    unionBtn->setStyleSheet("QToolButton { border-radius: 8px; border: 1px solid #ccc; background-color: #f0f0f0; } QToolButton:hover { background-color: #e0e0e0; } QToolButton:pressed { background-color: #d0d0d0; }");
+    QLabel* unionLabel = new QLabel("合并");
+    unionLabel->setAlignment(Qt::AlignCenter);
+    unionLabel->setStyleSheet("font-size: 9px; color: #333; margin-top: 2px;");
+    unionLayout->addWidget(unionBtn);
+    unionLayout->addWidget(unionLabel);
+    unionLayout->setSpacing(1);
+    unionLayout->setContentsMargins(0, 0, 0, 0);
+    booleanButtonsLayout->addLayout(unionLayout);
     
+    // Intersection button with label below
+    QVBoxLayout* intersectionLayout = new QVBoxLayout();
     QToolButton* intersectionBtn = new QToolButton();
     intersectionBtn->setDefaultAction(m_booleanIntersectionAction);
-    intersectionBtn->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
-    booleanButtonsLayout->addWidget(intersectionBtn);
+    intersectionBtn->setToolButtonStyle(Qt::ToolButtonIconOnly);
+    intersectionBtn->setIconSize(QSize(30, 30));
+    intersectionBtn->setFixedSize(30, 30);
+    intersectionBtn->setStyleSheet("QToolButton { border-radius: 8px; border: 1px solid #ccc; background-color: #f0f0f0; } QToolButton:hover { background-color: #e0e0e0; } QToolButton:pressed { background-color: #d0d0d0; }");
+    QLabel* intersectionLabel = new QLabel("相交");
+    intersectionLabel->setAlignment(Qt::AlignCenter);
+    intersectionLabel->setStyleSheet("font-size: 9px; color: #333; margin-top: 2px;");
+    intersectionLayout->addWidget(intersectionBtn);
+    intersectionLayout->addWidget(intersectionLabel);
+    intersectionLayout->setSpacing(1);
+    intersectionLayout->setContentsMargins(0, 0, 0, 0);
+    booleanButtonsLayout->addLayout(intersectionLayout);
     
+    // Difference button with label below
+    QVBoxLayout* differenceLayout = new QVBoxLayout();
     QToolButton* differenceBtn = new QToolButton();
     differenceBtn->setDefaultAction(m_booleanDifferenceAction);
-    differenceBtn->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
-    booleanButtonsLayout->addWidget(differenceBtn);
+    differenceBtn->setToolButtonStyle(Qt::ToolButtonIconOnly);
+    differenceBtn->setIconSize(QSize(30, 30));
+    differenceBtn->setFixedSize(30, 30);
+    differenceBtn->setStyleSheet("QToolButton { border-radius: 8px; border: 1px solid #ccc; background-color: #f0f0f0; } QToolButton:hover { background-color: #e0e0e0; } QToolButton:pressed { background-color: #d0d0d0; }");
+    QLabel* differenceLabel = new QLabel("切除");
+    differenceLabel->setAlignment(Qt::AlignCenter);
+    differenceLabel->setStyleSheet("font-size: 9px; color: #333; margin-top: 2px;");
+    differenceLayout->addWidget(differenceBtn);
+    differenceLayout->addWidget(differenceLabel);
+    differenceLayout->setSpacing(1);
+    differenceLayout->setContentsMargins(0, 0, 0, 0);
+    booleanButtonsLayout->addLayout(differenceLayout);
     
     booleanLayout->addLayout(booleanButtonsLayout);
     modifyLayout->addWidget(booleanFrame);
@@ -556,29 +668,64 @@ void MainWindow::CreateToolBars() {
     QFrame* modificationsFrame = new QFrame();
     modificationsFrame->setFrameStyle(QFrame::StyledPanel);
     QVBoxLayout* modificationsLayout = new QVBoxLayout(modificationsFrame);
-    modificationsLayout->setContentsMargins(2, 1, 2, 2);
+    modificationsLayout->setContentsMargins(5, 3, 5, 8);
     modificationsLayout->setSpacing(1);
     
     QLabel* modificationsLabel = new QLabel("修改");
     modificationsLabel->setAlignment(Qt::AlignCenter);
     modificationsLayout->addWidget(modificationsLabel);
     QHBoxLayout* modificationsButtonsLayout = new QHBoxLayout();
-    modificationsButtonsLayout->setSpacing(2);
+    modificationsButtonsLayout->setSpacing(8);
     
+    // Fillet button with label below
+    QVBoxLayout* filletLayout = new QVBoxLayout();
     QToolButton* filletBtn = new QToolButton();
     filletBtn->setDefaultAction(m_filletAction);
-    filletBtn->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
-    modificationsButtonsLayout->addWidget(filletBtn);
+    filletBtn->setToolButtonStyle(Qt::ToolButtonIconOnly);
+    filletBtn->setIconSize(QSize(30, 30));
+    filletBtn->setFixedSize(30, 30);
+    filletBtn->setStyleSheet("QToolButton { border-radius: 8px; border: 1px solid #ccc; background-color: #f0f0f0; } QToolButton:hover { background-color: #e0e0e0; } QToolButton:pressed { background-color: #d0d0d0; }");
+    QLabel* filletLabel = new QLabel("圆角");
+    filletLabel->setAlignment(Qt::AlignCenter);
+    filletLabel->setStyleSheet("font-size: 9px; color: #333; margin-top: 2px;");
+    filletLayout->addWidget(filletBtn);
+    filletLayout->addWidget(filletLabel);
+    filletLayout->setSpacing(1);
+    filletLayout->setContentsMargins(0, 0, 0, 0);
+    modificationsButtonsLayout->addLayout(filletLayout);
     
+    // Chamfer button with label below
+    QVBoxLayout* chamferLayout = new QVBoxLayout();
     QToolButton* chamferBtn = new QToolButton();
     chamferBtn->setDefaultAction(m_chamferAction);
-    chamferBtn->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
-    modificationsButtonsLayout->addWidget(chamferBtn);
+    chamferBtn->setToolButtonStyle(Qt::ToolButtonIconOnly);
+    chamferBtn->setIconSize(QSize(30, 30));
+    chamferBtn->setFixedSize(30, 30);
+    chamferBtn->setStyleSheet("QToolButton { border-radius: 8px; border: 1px solid #ccc; background-color: #f0f0f0; } QToolButton:hover { background-color: #e0e0e0; } QToolButton:pressed { background-color: #d0d0d0; }");
+    QLabel* chamferLabel = new QLabel("倒角");
+    chamferLabel->setAlignment(Qt::AlignCenter);
+    chamferLabel->setStyleSheet("font-size: 9px; color: #333; margin-top: 2px;");
+    chamferLayout->addWidget(chamferBtn);
+    chamferLayout->addWidget(chamferLabel);
+    chamferLayout->setSpacing(1);
+    chamferLayout->setContentsMargins(0, 0, 0, 0);
+    modificationsButtonsLayout->addLayout(chamferLayout);
     
+    // Transform button with label below
+    QVBoxLayout* transformLayout = new QVBoxLayout();
     QToolButton* transformBtn = new QToolButton();
     transformBtn->setDefaultAction(m_transformAction);
-    transformBtn->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
-    modificationsButtonsLayout->addWidget(transformBtn);
+    transformBtn->setToolButtonStyle(Qt::ToolButtonIconOnly);
+    transformBtn->setFixedSize(30, 30);
+    transformBtn->setStyleSheet("QToolButton { border-radius: 8px; border: 1px solid #ccc; background-color: #f0f0f0; } QToolButton:hover { background-color: #e0e0e0; } QToolButton:pressed { background-color: #d0d0d0; }");
+    QLabel* transformLabel = new QLabel("变换");
+    transformLabel->setAlignment(Qt::AlignCenter);
+    transformLabel->setStyleSheet("font-size: 9px; color: #333; margin-top: 2px;");
+    transformLayout->addWidget(transformBtn);
+    transformLayout->addWidget(transformLabel);
+    transformLayout->setSpacing(1);
+    transformLayout->setContentsMargins(0, 0, 0, 0);
+    modificationsButtonsLayout->addLayout(transformLayout);
     
     modificationsLayout->addLayout(modificationsButtonsLayout);
     modifyLayout->addWidget(modificationsFrame);
