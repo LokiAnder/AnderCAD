@@ -218,6 +218,11 @@ void MainWindow::CreateActions() {
     m_viewPerspectiveAction->setCheckable(true);
     m_viewPerspectiveAction->setStatusTip("Perspective projection");
     
+    // Transparency action
+    m_setTransparencyAction = new QAction("设置透明度50%", this);
+    m_setTransparencyAction->setShortcut(QKeySequence("T"));
+    m_setTransparencyAction->setStatusTip("Set all models to 50% transparency");
+    
     m_projectionModeGroup = new QActionGroup(this);
     m_projectionModeGroup->addAction(m_viewOrthographicAction);
     m_projectionModeGroup->addAction(m_viewPerspectiveAction);
@@ -352,6 +357,8 @@ void MainWindow::CreateMenus() {
     viewMenu->addSeparator();
     viewMenu->addAction(m_viewOrthographicAction);
     viewMenu->addAction(m_viewPerspectiveAction);
+    viewMenu->addSeparator();
+    viewMenu->addAction(m_setTransparencyAction);
     
     // Create menu
     QMenu* createMenu = menuBar()->addMenu("&Create");
@@ -786,6 +793,11 @@ void MainWindow::CreateToolBars() {
     shadedBtn->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
     viewControlsButtonsLayout->addWidget(shadedBtn);
     
+    QToolButton* transparencyBtn = new QToolButton();
+    transparencyBtn->setDefaultAction(m_setTransparencyAction);
+    transparencyBtn->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
+    viewControlsButtonsLayout->addWidget(transparencyBtn);
+    
     viewControlsLayout->addLayout(viewControlsButtonsLayout);
     viewLayout->addWidget(viewControlsFrame);
     
@@ -910,6 +922,7 @@ void MainWindow::ConnectSignals() {
     connect(m_viewShadedAction, &QAction::triggered, this, &MainWindow::OnViewShaded);
     connect(m_viewOrthographicAction, &QAction::triggered, this, &MainWindow::OnViewOrthographic);
     connect(m_viewPerspectiveAction, &QAction::triggered, this, &MainWindow::OnViewPerspective);
+    connect(m_setTransparencyAction, &QAction::triggered, this, &MainWindow::OnSetTransparency);
     
     // Create actions
     connect(m_createBoxAction, &QAction::triggered, this, &MainWindow::OnCreateBox);
@@ -1158,6 +1171,12 @@ void MainWindow::OnViewOrthographic() {
 
 void MainWindow::OnViewPerspective() {
     m_viewer->SetProjectionMode(false);
+}
+
+void MainWindow::OnSetTransparency() {
+    if (m_viewer) {
+        m_viewer->SetAllTransparency(0.5); // Set to 50% transparency
+    }
 }
 
 void MainWindow::OnCreateBox() {

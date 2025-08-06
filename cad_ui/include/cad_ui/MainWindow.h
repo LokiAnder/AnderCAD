@@ -101,6 +101,7 @@ private slots:
     void OnViewShaded();
     void OnViewOrthographic();
     void OnViewPerspective();
+    void OnSetTransparency();
     
     void OnCreateBox();
     void OnCreateCylinder();
@@ -288,6 +289,7 @@ private:
     
     QAction* m_showGridAction;
     QAction* m_showAxesAction;
+    QAction* m_setTransparencyAction;
     QAction* m_darkThemeAction;
     QAction* m_lightThemeAction;
     

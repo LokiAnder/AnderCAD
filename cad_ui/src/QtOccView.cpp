@@ -20,6 +20,7 @@
 #include <TopAbs.hxx>
 #include <Prs3d_LineAspect.hxx>
 #include <Quantity_Color.hxx>
+#include <algorithm>
 
 #ifdef _WIN32
 #include <WNT_Window.hxx>
@@ -399,6 +400,33 @@ void QtOccView::ShowAxes(bool show) {
     } else {
         m_view->TriedronErase();
     }
+    m_view->Redraw();
+}
+
+void QtOccView::SetAllTransparency(double transparency) {
+    if (m_context.IsNull()) return;
+    
+    // Clamp transparency value between 0.0 and 1.0
+    transparency = std::max(0.0, std::min(1.0, transparency));
+    
+    // Iterate through all displayed AIS_Shape objects
+    AIS_ListOfInteractive aList;
+    m_context->DisplayedObjects(aList);
+    
+    for (AIS_ListOfInteractive::Iterator anIter(aList); anIter.More(); anIter.Next()) {
+        Handle(AIS_Shape) aShape = Handle(AIS_Shape)::DownCast(anIter.Value());
+        if (!aShape.IsNull()) {
+            // Set transparency for the shape
+            if (transparency > 0.0) {
+                m_context->SetTransparency(aShape, transparency, Standard_False);
+            } else {
+                m_context->UnsetTransparency(aShape, Standard_False);
+            }
+        }
+    }
+    
+    // Update the view
+    m_context->UpdateCurrentViewer();
     m_view->Redraw();
 }
 

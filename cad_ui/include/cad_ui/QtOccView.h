@@ -90,6 +90,9 @@ public:
     // 坐标轴
     void ShowAxes(bool show);
     
+    // 透明度控制
+    void SetAllTransparency(double transparency);
+    
     // 草图模式支持
     bool IsInSketchMode() const;
     void EnterSketchMode(const TopoDS_Face& face);
