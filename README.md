@@ -1,7 +1,7 @@
 # Ander CAD - 开发者指南与架构文档
 
 > 一个基于OpenCASCADE和Qt5的现代化参数化CAD应用程序
-
+![samplegif](sample.gif)
 ## 📋 目录
 
 - [项目概述](#项目概述)
