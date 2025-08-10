@@ -1,4 +1,5 @@
-#include "cad_ui/ToolBar.h"
+﻿#include "cad_ui/ToolBar.h"
+#pragma execution_character_set("utf-8")
 
 namespace cad_ui {
 

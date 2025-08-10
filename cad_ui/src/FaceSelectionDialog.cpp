@@ -1,4 +1,4 @@
-#include "cad_ui/FaceSelectionDialog.h"
+﻿#include "cad_ui/FaceSelectionDialog.h"
 #include "cad_ui/QtOccView.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -8,6 +8,7 @@
 #include <QMessageBox>
 #include <QDebug>
 #include <AIS_ListOfInteractive.hxx>
+#pragma execution_character_set("utf-8")
 
 namespace cad_ui {
 

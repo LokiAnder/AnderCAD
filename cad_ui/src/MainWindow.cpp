@@ -1,4 +1,4 @@
-#include "cad_ui/MainWindow.h"
+﻿#include "cad_ui/MainWindow.h"
 #include "cad_ui/ExportDialog.h"
 #include "cad_ui/AboutDialog.h"
 #include "cad_ui/CreatePrimitiveDialog.h"
@@ -9,8 +9,17 @@
 #include "cad_core/ShapeFactory.h"
 #include "cad_core/BooleanOperations.h"
 #include "cad_core/FilletChamferOperations.h"
+#include "cad_ui/CreateHoleDialog.h" 
 #include "cad_core/SelectionManager.h"
 #include <TopoDS.hxx>
+#include <BRep_Tool.hxx>
+#include <GProp_GProps.hxx>
+#include <BRepGProp.hxx>
+#include <gp_Pln.hxx>
+#include <Geom_Surface.hxx>
+#include <Geom_Plane.hxx>
+#include <gp_Ax2.hxx>
+#include <BRepBuilderAPI_Transform.hxx>
 
 #include <iostream>
 #include <QApplication>
@@ -30,6 +39,7 @@
 #include <QFrame>
 #include <QLabel>
 #include <map>
+#pragma execution_character_set("utf-8")
 
 namespace cad_ui {
 
@@ -38,7 +48,7 @@ MainWindow::MainWindow(QWidget* parent)
       m_isDragging(false), m_dragStartPosition(), m_titleBar(nullptr),
       m_titleLabel(nullptr), m_minimizeButton(nullptr), m_maximizeButton(nullptr),
       m_closeButton(nullptr), m_currentBooleanDialog(nullptr), m_currentFilletChamferDialog(nullptr),
-      m_currentTransformDialog(nullptr), m_previewActive(false), 
+      m_currentTransformDialog(nullptr), 
       m_waitingForFaceSelection(false) {
     
     // Load modern flat stylesheet
@@ -51,7 +61,7 @@ MainWindow::MainWindow(QWidget* parent)
     } else {
         qDebug() << "Failed to load stylesheet from QRC resources";
         // Fallback: try to load from file system for development
-        QFile fallbackFile("");
+        QFile fallbackFile("C:\\Users\\Administrator\\source\\repos\\AnderCAD\\cad_ui\\resources\\styles.qss");
         if (fallbackFile.open(QFile::ReadOnly | QFile::Text)) {
             QTextStream fallbackStream(&fallbackFile);
             QString fallbackStyle = fallbackStream.readAll();
@@ -105,6 +115,7 @@ MainWindow::MainWindow(QWidget* parent)
     // Initialize dialog pointers to null
     m_currentBooleanDialog = nullptr;
     m_currentFilletChamferDialog = nullptr;
+    m_currentHoleDialog = nullptr;
     
     // Connect signals
     ConnectSignals();
@@ -218,11 +229,6 @@ void MainWindow::CreateActions() {
     m_viewPerspectiveAction->setCheckable(true);
     m_viewPerspectiveAction->setStatusTip("Perspective projection");
     
-    // Transparency action
-    m_setTransparencyAction = new QAction("设置透明度50%", this);
-    m_setTransparencyAction->setShortcut(QKeySequence("T"));
-    m_setTransparencyAction->setStatusTip("Set all models to 50% transparency");
-    
     m_projectionModeGroup = new QActionGroup(this);
     m_projectionModeGroup->addAction(m_viewOrthographicAction);
     m_projectionModeGroup->addAction(m_viewPerspectiveAction);
@@ -271,6 +277,7 @@ void MainWindow::CreateActions() {
     m_booleanDifferenceAction->setIcon(cutIcon);
     m_booleanDifferenceAction->setStatusTip("从一个形状中减去另一个形状");
     
+
     // Fillet and chamfer operations with 30x30 icons (icon-only display)
     m_filletAction = new QAction("", this);
     QIcon filletIcon(":/icons/icons/Mod-Fillet.svg");
@@ -283,6 +290,14 @@ void MainWindow::CreateActions() {
     chamferIcon.addPixmap(QPixmap(":/icons/icons/Mod-Chamfer.svg").scaled(30, 30, Qt::KeepAspectRatio, Qt::SmoothTransformation));
     m_chamferAction->setIcon(chamferIcon);
     m_chamferAction->setStatusTip("Add chamfer to selected edges");
+
+	// create hole action with 30x30 icon (icon-only display)
+    m_createHoleAction = new QAction("", this);
+    //QIcon holeIcon(":/icons/icons/Boolean-Cut.svg");
+    //holeIcon.addPixmap(QPixmap(":/icons/icons/Boolean-Cut.svg").scaled(30, 30, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    //m_createHoleAction->setIcon(holeIcon);
+    m_createHoleAction->setStatusTip("Create a hole on a face");
+
     
     // Transform actions
     m_transformAction = new QAction("&Transform...", this);
@@ -357,8 +372,6 @@ void MainWindow::CreateMenus() {
     viewMenu->addSeparator();
     viewMenu->addAction(m_viewOrthographicAction);
     viewMenu->addAction(m_viewPerspectiveAction);
-    viewMenu->addSeparator();
-    viewMenu->addAction(m_setTransparencyAction);
     
     // Create menu
     QMenu* createMenu = menuBar()->addMenu("&Create");
@@ -717,6 +730,23 @@ void MainWindow::CreateToolBars() {
     chamferLayout->setSpacing(1);
     chamferLayout->setContentsMargins(0, 0, 0, 0);
     modificationsButtonsLayout->addLayout(chamferLayout);
+
+    // Hole button with label below
+    QVBoxLayout* holeLayout = new QVBoxLayout();
+    QToolButton* holeBtn = new QToolButton();
+    holeBtn->setDefaultAction(m_createHoleAction);
+    holeBtn->setToolButtonStyle(Qt::ToolButtonIconOnly);
+    holeBtn->setIconSize(QSize(30, 30));
+    holeBtn->setFixedSize(30, 30);
+    holeBtn->setStyleSheet("QToolButton { border-radius: 8px; border: 1px solid #ccc; background-color: #f0f0f0; } QToolButton:hover { background-color: #e0e0e0; } QToolButton:pressed { background-color: #d0d0d0; }");
+    QLabel* holeLabel = new QLabel("挖孔");
+    holeLabel->setAlignment(Qt::AlignCenter);
+    holeLabel->setStyleSheet("font-size: 9px; color: #333; margin-top: 2px;");
+    holeLayout->addWidget(holeBtn);
+    holeLayout->addWidget(holeLabel);
+    holeLayout->setSpacing(1);
+    holeLayout->setContentsMargins(0, 0, 0, 0);
+    modificationsButtonsLayout->addLayout(holeLayout);
     
     // Transform button with label below
     QVBoxLayout* transformLayout = new QVBoxLayout();
@@ -792,11 +822,6 @@ void MainWindow::CreateToolBars() {
     shadedBtn->setDefaultAction(m_viewShadedAction);
     shadedBtn->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
     viewControlsButtonsLayout->addWidget(shadedBtn);
-    
-    QToolButton* transparencyBtn = new QToolButton();
-    transparencyBtn->setDefaultAction(m_setTransparencyAction);
-    transparencyBtn->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
-    viewControlsButtonsLayout->addWidget(transparencyBtn);
     
     viewControlsLayout->addLayout(viewControlsButtonsLayout);
     viewLayout->addWidget(viewControlsFrame);
@@ -922,7 +947,6 @@ void MainWindow::ConnectSignals() {
     connect(m_viewShadedAction, &QAction::triggered, this, &MainWindow::OnViewShaded);
     connect(m_viewOrthographicAction, &QAction::triggered, this, &MainWindow::OnViewOrthographic);
     connect(m_viewPerspectiveAction, &QAction::triggered, this, &MainWindow::OnViewPerspective);
-    connect(m_setTransparencyAction, &QAction::triggered, this, &MainWindow::OnSetTransparency);
     
     // Create actions
     connect(m_createBoxAction, &QAction::triggered, this, &MainWindow::OnCreateBox);
@@ -938,6 +962,7 @@ void MainWindow::ConnectSignals() {
     // Modify actions
     connect(m_filletAction, &QAction::triggered, this, &MainWindow::OnFillet);
     connect(m_chamferAction, &QAction::triggered, this, &MainWindow::OnChamfer);
+	connect(m_createHoleAction, &QAction::triggered, this, &MainWindow::OnCreateHole);
     
     // Transform operations
     connect(m_transformAction, &QAction::triggered, this, &MainWindow::OnTransformObjects);
@@ -1171,12 +1196,6 @@ void MainWindow::OnViewOrthographic() {
 
 void MainWindow::OnViewPerspective() {
     m_viewer->SetProjectionMode(false);
-}
-
-void MainWindow::OnSetTransparency() {
-    if (m_viewer) {
-        m_viewer->SetAllTransparency(0.5); // Set to 50% transparency
-    }
 }
 
 void MainWindow::OnCreateBox() {
@@ -1507,6 +1526,39 @@ void MainWindow::OnChamfer() {
     m_currentFilletChamferDialog->activateWindow();
 }
 
+void MainWindow::OnCreateHole() {
+    if (m_currentHoleDialog) {
+        m_currentHoleDialog->close();
+        return;
+    }
+
+    // 创建对话框时传入 viewer 指针
+    m_currentHoleDialog = new CreateHoleDialog(m_viewer, this);
+    connect(m_viewer, &QtOccView::FaceSelected, m_currentHoleDialog, &CreateHoleDialog::onFaceSelected);
+    connect(m_currentHoleDialog, &CreateHoleDialog::selectionModeChanged, this, &MainWindow::OnSelectionModeChanged);
+    connect(m_currentHoleDialog, &CreateHoleDialog::operationRequested, this, &MainWindow::OnHoleOperationRequested);
+    connect(m_currentHoleDialog, &CreateHoleDialog::previewRequested, this, &MainWindow::OnHolePreviewRequested);
+    connect(m_currentHoleDialog, &CreateHoleDialog::resetPreviewRequested, this, &MainWindow::OnHoleResetPreviewRequested);
+    connect(this, &MainWindow::faceSelectionInfo, m_currentHoleDialog, &CreateHoleDialog::updateCenterCoords);
+
+    connect(m_currentHoleDialog, &QDialog::finished, this, [this](int result) {
+        if (m_currentHoleDialog) {
+            // 调用清理函数恢复视图
+            m_currentHoleDialog->cleanupAndRestoreView();
+            m_currentHoleDialog->deleteLater();
+            m_currentHoleDialog = nullptr;
+        }
+        // 恢复主窗口的默认选择模式
+        OnSelectionModeChanged(false, "");
+        statusBar()->showMessage("Ready");
+        });
+
+    m_currentHoleDialog->show();
+    m_currentHoleDialog->raise();
+    m_currentHoleDialog->activateWindow();
+}
+
+
 // Selection mode combo box
 void MainWindow::OnSelectionModeComboChanged(int index) {
     if (!m_selectionModeCombo) return;
@@ -1782,7 +1834,12 @@ void MainWindow::OnSelectionModeChanged(bool enabled, const QString& prompt) {
             if (m_selectionModeCombo) {
                 m_selectionModeCombo->setCurrentIndex(0); // Shape mode
             }
-        } else {
+
+        }else if (m_currentHoleDialog) { 
+			// use face selection mode for hole creation
+            m_viewer->SetSelectionMode(4); 
+
+        }else {
             // Default to shape selection
             m_viewer->SetSelectionMode(cad_core::SelectionMode::Shape);
             
@@ -2244,7 +2301,18 @@ void MainWindow::OnSketchRectangleTool() {
     statusBar()->showMessage("矩形工具已激活 - 点击并拖拽创建矩形");
 }
 
-void MainWindow::OnFaceSelected(const TopoDS_Face& face) {
+void MainWindow::OnFaceSelected(const TopoDS_Face& face, const cad_core::ShapePtr& parentShape) {
+    if (m_currentHoleDialog && !face.IsNull()) {
+        m_currentHoleDialog->onObjectSelected(parentShape);
+        m_currentHoleDialog->onFaceSelected(face);
+
+
+        GProp_GProps props;
+        BRepGProp::SurfaceProperties(face, props);
+        gp_Pnt faceCenter = props.CentreOfMass();
+        emit faceSelectionInfo(faceCenter.X(), faceCenter.Y(), faceCenter.Z());
+    }
+
     if (!m_waitingForFaceSelection) {
         return;
     }
@@ -2340,6 +2408,91 @@ void MainWindow::OnSketchModeExited() {
     statusBar()->showMessage("已退出草图模式");
     
     qDebug() << "Sketch mode exited, UI updated";
+}
+
+
+void MainWindow::OnHoleOperationRequested(const cad_core::ShapePtr& targetShape, const TopoDS_Face& selectedFace,
+    double diameter, double depth,
+    double x, double y, double z) {
+
+    // 获取孔的方向 
+    Handle(Geom_Surface) surface = BRep_Tool::Surface(selectedFace);
+    Handle(Geom_Plane) plane = Handle(Geom_Plane)::DownCast(surface);
+    if (plane.IsNull()) {
+        QMessageBox::warning(this, "挖孔失败", "挖孔操作目前只支持在平面上进行。");
+        return;
+    }
+    gp_Dir holeDirection = plane->Axis().Direction();
+    if (selectedFace.Orientation() == TopAbs_REVERSED) {
+        holeDirection.Reverse();
+    }
+
+    // 在原点创建圆柱体，然后移动它
+    // 在(0,0,0)创建一个朝向Z轴的圆柱体
+    auto cylinderTool = cad_core::ShapeFactory::CreateCylinder(diameter / 2.0, depth);
+    if (!cylinderTool) {
+        QMessageBox::warning(this, "错误", "在原点创建圆柱工具失败。");
+        return;
+    }
+
+    gp_Trsf transformation;
+    gp_Ax3 targetCoordinateSystem(gp_Pnt(x, y, z), holeDirection.Reversed());
+    // 移动到目标坐标系
+    transformation.SetTransformation(targetCoordinateSystem, gp::XOY());
+
+    // 应用变换
+    BRepBuilderAPI_Transform transformer(cylinderTool->GetOCCTShape(), transformation, Standard_True);
+    auto transformedCylinder = std::make_shared<cad_core::Shape>(transformer.Shape());
+
+    // 执行布尔差集
+    m_ocafManager->StartTransaction("Create Hole");
+    auto resultShape = cad_core::BooleanOperations::Difference(targetShape, transformedCylinder);
+
+
+    if (resultShape && resultShape->IsValid()) {
+        // 调用清理函数
+        if (m_currentHoleDialog) {
+            m_currentHoleDialog->cleanupAndRestoreView();
+        }
+
+        if (m_ocafManager->ReplaceShape(targetShape, resultShape)) {
+            // 更新模型
+            m_viewer->RemoveShape(targetShape);
+            m_documentTree->RemoveShape(targetShape);
+
+            m_viewer->DisplayShape(resultShape);
+            m_documentTree->AddShape(resultShape);
+
+            SetDocumentModified(true);
+            m_ocafManager->CommitTransaction();
+            statusBar()->showMessage("挖孔成功！", 3000);
+        }
+        else {
+            m_ocafManager->AbortTransaction();
+            QMessageBox::warning(this, "挖孔失败", "无法在文档中替换实体。");
+        }
+    }
+    else {
+        m_ocafManager->AbortTransaction();
+        QMessageBox::warning(this, "挖孔操作失败", "挖孔操作失败。请检查坐标是否在实体内部。");
+    }
+}
+
+void MainWindow::OnHolePreviewRequested(const cad_core::ShapePtr & holePreviewShape)
+{
+    if (!m_viewer || !holePreviewShape) {
+        return;
+    }
+    m_viewer->DisplayPreviewShape(holePreviewShape);
+}
+
+void MainWindow::OnHoleResetPreviewRequested()
+{
+    if (!m_viewer) {
+        return;
+    }
+
+    m_viewer->ClearPreviewShapes();
 }
 
 } // namespace cad_ui

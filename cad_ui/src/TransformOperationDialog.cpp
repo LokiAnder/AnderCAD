@@ -1,4 +1,4 @@
-#include "cad_ui/TransformOperationDialog.h"
+﻿#include "cad_ui/TransformOperationDialog.h"
 #include "cad_core/Point.h"
 #include <QApplication>
 #include <QMessageBox>
@@ -6,6 +6,7 @@
 #include <QSlider>
 #include <QDebug>
 #include <cmath>
+#pragma execution_character_set("utf-8")
 
 namespace cad_ui {
 

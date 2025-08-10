@@ -1,7 +1,8 @@
-#include "cad_ui/FilletChamferDialog.h"
+﻿#include "cad_ui/FilletChamferDialog.h"
 #include "cad_ui/QtOccView.h"
 #include <QApplication>
 #include <QMessageBox>
+#pragma execution_character_set("utf-8")
 
 namespace cad_ui {
 

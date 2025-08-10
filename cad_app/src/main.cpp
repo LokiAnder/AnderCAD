@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file main.cpp
  * @brief Ander CAD的主程序入口 - 一切故事开始的地方！
  * 
