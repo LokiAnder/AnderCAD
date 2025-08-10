@@ -1,5 +1,6 @@
-#include "cad_ui/CreatePrimitiveDialog.h"
+﻿#include "cad_ui/CreatePrimitiveDialog.h"
 #include <QApplication>
+#pragma execution_character_set("utf-8")
 
 namespace cad_ui {
 

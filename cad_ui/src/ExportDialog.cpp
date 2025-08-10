@@ -1,6 +1,7 @@
-#include "cad_ui/ExportDialog.h"
+﻿#include "cad_ui/ExportDialog.h"
 #include <QFileDialog>
 #include <QMessageBox>
+#pragma execution_character_set("utf-8")
 
 namespace cad_ui {
 

@@ -46,6 +46,13 @@ public:
     void DisplayShape(const cad_core::ShapePtr& shape);
     void RemoveShape(const cad_core::ShapePtr& shape);
     void ClearShapes();
+
+	// 预览形状显示
+    void DisplayPreviewShape(const cad_core::ShapePtr& shape);
+    void ClearPreviewShapes();
+    void EnablePreviewDragging(const gp_Pln& plane);// 预览拖拽
+    void DisablePreviewDragging();
+
     void RedrawAll();
     virtual QPaintEngine* paintEngine() const;
     
@@ -59,16 +66,19 @@ public:
     void ClearSelection();
     void SelectShape(const cad_core::ShapePtr& shape);
     
-    // 用于操作的边选择
+    // 用于操作的边和面选择
     void ClearEdgeSelection();
     std::vector<TopoDS_Edge> GetSelectedTopoEdges() const { return m_selectedEdges; }
     std::map<cad_core::ShapePtr, std::vector<TopoDS_Edge>> GetSelectedEdgesByShape() const;
     void HighlightEdge(const TopoDS_Edge& edge);
     void HighlightVertex(const TopoDS_Vertex& vertex);
     void HighlightFace(const TopoDS_Face& face);
+    void SetShapeTransparency(const cad_core::ShapePtr& shape, double transparency);
+    void ResetShapeDisplay(const cad_core::ShapePtr& shape);
     void UnhighlightAllEdges();
     void UnhighlightAllVertices();
     void UnhighlightAllFaces();
+	
     
     // 高级选择方法
     std::vector<cad_core::SelectionInfo> GetSelectedShapes() const;
@@ -90,23 +100,22 @@ public:
     // 坐标轴
     void ShowAxes(bool show);
     
-    // 透明度控制
-    void SetAllTransparency(double transparency);
-    
     // 草图模式支持
     bool IsInSketchMode() const;
     void EnterSketchMode(const TopoDS_Face& face);
     void ExitSketchMode();
     void StartRectangleTool();
 
+
 signals:
     void ShapeSelected(const cad_core::ShapePtr& shape);
-    void FaceSelected(const TopoDS_Face& face);
+    void FaceSelected(const TopoDS_Face& face, const cad_core::ShapePtr& parentShape);
     void ViewChanged();
     void SketchModeEntered();
     void SketchModeExited();
     void MousePositionChanged(int x, int y);
     void Mouse3DPositionChanged(double x, double y, double z);
+	void previewObjectMoved(double x, double y, double z);// 拖拽时告知新作标
 
 protected:
     void paintEvent(QPaintEvent* event) override;
@@ -157,6 +166,15 @@ private:
     // 用于面选择的高亮状态
     std::vector<TopoDS_Face> m_selectedFaces;
     std::vector<Handle(AIS_InteractiveObject)> m_highlightedFaces;
+
+	// 用于预览形状的显示
+    std::vector<Handle(AIS_InteractiveObject)> m_previewAISShapes;
+
+	// 拖拽预览相关（未实现）
+    bool m_isDraggingPreview;
+    Handle(AIS_InteractiveObject) m_draggedObject;
+    gp_Pln m_draggingPlane;
+    gp_Pnt m_dragStartPoint3D;
     
     // 草图模式
     std::unique_ptr<class SketchMode> m_sketchMode;
